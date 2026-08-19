@@ -1,0 +1,160 @@
+---
+import { site, nav } from '../site';
+---
+
+<header class="bar">
+  <div class="inner glass">
+    <a href="/" class="mark">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="name">{site.name}</span>
+    </a>
+
+    <nav aria-label="Primary">
+      <ul>
+        {nav.map((item) => (
+          <li><a href={item.href}>{item.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <button id="theme-toggle" type="button" aria-label="Switch colour theme">
+      <svg class="sun" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2" fill="currentColor" />
+        <g stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.4 5.4l1.8 1.8M16.8 16.8l1.8 1.8M18.6 5.4l-1.8 1.8M7.2 16.8l-1.8 1.8"/>
+        </g>
+      </svg>
+      <svg class="moon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+        <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" fill="currentColor"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<style>
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: .75rem var(--rail) 0;
+    pointer-events: none;
+  }
+
+  .inner {
+    pointer-events: auto;
+    max-width: 82rem;
+    margin-inline: auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .55rem .6rem .55rem 1rem;
+    border-radius: 999px;
+  }
+
+  .mark {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: .95rem;
+    letter-spacing: -.02em;
+    color: var(--glass-ink);
+    white-space: nowrap;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+    flex: none;
+  }
+
+  nav { margin-left: auto; }
+
+  ul {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  ul a {
+    display: block;
+    padding: .45rem .8rem;
+    border-radius: 999px;
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--glass-ink-2);
+    transition: color .2s, background-color .2s;
+  }
+
+  ul a:hover {
+    color: var(--glass-ink);
+    background: color-mix(in srgb, var(--glass-ink) 9%, transparent);
+  }
+
+  button {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: color-mix(in srgb, var(--glass-ink) 7%, transparent);
+    color: var(--glass-ink);
+    cursor: pointer;
+    transition: transform .2s, background-color .2s;
+  }
+
+  button:hover {
+    transform: scale(1.06);
+    background: color-mix(in srgb, var(--glass-ink) 14%, transparent);
+  }
+
+  button svg { grid-area: 1 / 1; }
+
+  /* Show the icon for the theme you'd switch TO. */
+  .moon { display: none; }
+  :global(:root[data-theme="dark"]) .moon { display: none; }
+  :global(:root[data-theme="dark"]) .sun { display: block; }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .sun { display: block; }
+    :global(:root:not([data-theme="light"])) .moon { display: none; }
+  }
+
+  :global(:root[data-theme="light"]) .sun { display: none; }
+  :global(:root[data-theme="light"]) .moon { display: block; }
+
+  @media (prefers-color-scheme: light) {
+    :global(:root:not([data-theme="dark"])) .sun { display: none; }
+    :global(:root:not([data-theme="dark"])) .moon { display: block; }
+  }
+
+  @media (max-width: 34rem) {
+    .name { display: none; }
+    ul a { padding: .45rem .6rem; font-size: .82rem; }
+  }
+</style>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+
+  btn?.addEventListener('click', () => {
+    const root = document.documentElement;
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const current = root.dataset.theme ?? (systemDark ? 'dark' : 'light');
+    const next = current === 'dark' ? 'light' : 'dark';
+
+    root.dataset.theme = next;
+    try {
+      localStorage.setItem('theme', next);
+    } catch (e) { /* private mode: theme resets next visit, no harm */ }
+  });
+</script>

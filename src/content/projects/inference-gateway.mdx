@@ -1,0 +1,59 @@
+---
+# ---------------------------------------------------------------
+# PLACEHOLDER / SAMPLE CONTENT - NOT A REAL PROJECT
+# Written to exercise the layout at realistic length. Every metric,
+# repo URL and claim below is invented. Replace before launch.
+# ---------------------------------------------------------------
+title: "Inference Gateway"
+tagline: "A routing layer that picks the cheapest model able to handle each request, with a semantic cache in front of it."
+role: "Backend and evaluation"
+period: "2025"
+stack: ["TypeScript", "Hono", "Redis", "Cloudflare Workers", "OpenTelemetry"]
+repo: "https://github.com/example/inference-gateway"
+live: "https://example.com"
+problem: "Routing every request to the largest available model was burning budget on questions a small model answered identically well."
+outcomes:
+  - metric: "-64%"
+    label: "cost per thousand requests"
+  - metric: "310ms"
+    label: "p95, down from 1.9s"
+  - metric: "31%"
+    label: "semantic cache hit rate"
+order: 2
+---
+
+## The constraint
+
+Every request went to the largest model by default, because that was the safe choice and nobody
+had evidence for a cheaper one. The bill grew linearly with usage and the latency profile was
+poor for a product with an interactive feel.
+
+The question wasn't "can we use a smaller model" — it was **which requests can tolerate one**, and
+how do you decide that per request rather than globally.
+
+## What I built
+
+A gateway that classifies each incoming request by difficulty and routes it to the cheapest tier
+predicted to handle it, with an escalation path when the cheap tier returns low confidence. In
+front of that sits a semantic cache: embed the query, and if a prior query sits within a tuned
+cosine distance and its context hasn't changed, return the cached answer.
+
+The escalation path is the part that makes it safe. A cheap-tier answer that trips a confidence
+threshold is silently retried on the larger model, so the failure mode is extra latency on a
+minority of requests rather than a worse answer.
+
+## The decision I'd defend
+
+**A tuned similarity threshold on the semantic cache, set by measured false-hit rate rather than intuition.**
+
+Semantic caching is where this kind of system quietly goes wrong. Set the distance too loose and
+you serve confidently wrong answers to questions nobody asked. I built a labelled set of near-miss
+query pairs — pairs that look similar and have genuinely different correct answers — and swept the
+threshold against it. The value I shipped keeps false hits under 0.5%, which cost about eight
+points of hit rate versus the naive setting and is worth it.
+
+## What I'd change
+
+The difficulty classifier is a heuristic over query length, question type and retrieved-context
+size. It works, but it was tuned by hand and I have no ongoing measurement of how often it routes
+wrongly. I'd log the escalation rate per class and let that drive retuning automatically.
