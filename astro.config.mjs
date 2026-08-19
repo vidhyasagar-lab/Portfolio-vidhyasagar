@@ -7,7 +7,10 @@ import tailwind from '@tailwindcss/vite';
 // Static output by default: every page prerenders at build time.
 // The Vercel adapter is here only to reach Vercel's own services.
 export default defineConfig({
-  site: 'https://example.com',
+  // Absolute base for canonical URLs and og tags. Astro.url resolves against
+  // this at build time, so a placeholder here ships a wrong canonical to every
+  // page. Change it here if a custom domain is added.
+  site: 'https://portfolio-vidhyasagar.vercel.app',
   adapter: vercel({
     // Left off deliberately. Project screenshots are a fixed, known set,
     // so Sharp optimises them at build time and we spend zero of the
