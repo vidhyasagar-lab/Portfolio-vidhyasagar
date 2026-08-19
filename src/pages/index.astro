@@ -14,7 +14,6 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
   {/* ---------------- HERO ---------------- */}
   <section class="hero">
     <div class="mesh" aria-hidden="true"></div>
-    <p class="field-hint mono-label">Drag to rotate · scroll to separate clusters</p>
 
     <div class="shell hero-grid">
       <div class="hero-copy">
@@ -170,21 +169,6 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
   }
 
   .hero-copy { display: grid; gap: 1.4rem; justify-items: start; }
-
-  /* Sits above the canvas but must not intercept the drag. */
-  .field-hint {
-    position: absolute;
-    right: var(--rail);
-    bottom: 1.1rem;
-    z-index: 2;
-    pointer-events: none;
-    font-size: .62rem;
-    opacity: .75;
-  }
-
-  @media (max-width: 60rem) {
-    .field-hint { display: none; }
-  }
 
   /* The copy and console sit over the field; let drags through the gaps. */
   .hero-grid { pointer-events: none; }
