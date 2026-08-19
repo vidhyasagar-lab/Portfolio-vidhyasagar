@@ -48,7 +48,7 @@
   --mesh-1: #9FC9BE;
   --mesh-2: #E8CFA0;
   --mesh-3: #A8B4D6;
-  --mesh-alpha: .30;
+  --mesh-alpha: .16;
 
   /* --- ambient page field --- */
   --au-1: #7FB6A6;   /* teal */
@@ -104,7 +104,7 @@
     --mesh-1: #1E6E63;
     --mesh-2: #8A5A18;
     --mesh-3: #2F3D6B;
-    --mesh-alpha: .42;
+    --mesh-alpha: .20;
 
     --au-1: #1B7A6B;
     --au-2: #A66A12;
@@ -149,7 +149,7 @@
   --mesh-1: #1E6E63;
   --mesh-2: #8A5A18;
   --mesh-3: #2F3D6B;
-  --mesh-alpha: .42;
+  --mesh-alpha: .20;
 
   --au-1: #1B7A6B;
   --au-2: #A66A12;
@@ -404,8 +404,9 @@ img { max-width: 100%; height: auto; display: block; }
   to   { transform: translate3d(8vw, -7vh, 0) scale(1.18); }
 }
 
-/* Content must sit above the ambient field. */
-main, footer { position: relative; z-index: 1; }
+/* Layer order: aurora (0) -> pinned WebGL field (1) -> content (2) -> nav (50).
+   Sections must stay transparent so the field reads through them. */
+main, footer { position: relative; z-index: 2; }
 
 @media (prefers-reduced-transparency: reduce) {
   .ambient .blob { display: none; }
@@ -424,6 +425,93 @@ main, footer { position: relative; z-index: 1; }
     radial-gradient(38rem 26rem at 88% 12%, var(--mesh-2), transparent 58%),
     radial-gradient(46rem 32rem at 62% 92%, var(--mesh-3), transparent 64%);
   filter: blur(24px);
+}
+
+/* ============================================================
+   3D TILT
+   Shared by every card surface. Pointer position drives --rx/--ry;
+   children lift on Z so they parallax against the card face.
+   ============================================================ */
+
+@media (hover: hover) and (pointer: fine) {
+  [data-tilt] {
+    transform:
+      perspective(1000px)
+      rotateX(var(--rx, 0deg))
+      rotateY(var(--ry, 0deg))
+      translate3d(0, var(--lift, 0px), 0);
+    transform-style: preserve-3d;
+  }
+
+  [data-tilt]:hover,
+  [data-tilt]:focus-within { --lift: -6px; }
+
+  /* .hit is a full-bleed click target — lifting it would break the hit area. */
+  [data-tilt] > :not(.hit) {
+    transform: translate3d(0, 0, 24px);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  [data-tilt]:hover,
+  [data-tilt]:focus-within { transform: translate3d(0, -5px, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tilt] { transform: none !important; }
+  [data-tilt] > :not(.hit) { transform: none; }
+}
+
+/* ============================================================
+   VIEW TRANSITIONS (cross-document, zero JS)
+   ~92% browser coverage; anything older just navigates normally.
+   ============================================================ */
+
+@view-transition { navigation: auto; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: .34s;
+  animation-timing-function: cubic-bezier(.22, .68, .28, 1);
+}
+
+/* The project title morphs from card to case-study headline. */
+::view-transition-group(*) {
+  animation-duration: .42s;
+  animation-timing-function: cubic-bezier(.22, .68, .28, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
+
+/* ============================================================
+   READING PROGRESS (scroll-driven, pure CSS)
+   Chromium-only today — Safari has no support at all, so this is
+   strictly additive: hidden entirely unless the browser can drive it.
+   ============================================================ */
+
+.read-progress { display: none; }
+
+@supports (animation-timeline: scroll()) {
+  .read-progress {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    z-index: 60;
+    background: var(--accent);
+    transform-origin: 0 50%;
+    animation: scrub linear both;
+    animation-timeline: scroll(root block);
+  }
+
+  @keyframes scrub {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
 }
 
 /* ============================================================

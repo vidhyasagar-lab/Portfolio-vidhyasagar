@@ -1,0 +1,332 @@
+---
+/**
+ * Interactive eval console.
+ *
+ * The thesis of the site is "I make model output measurable". Rather than
+ * asserting it, this lets a visitor change a RAG pipeline's configuration and
+ * watch the metrics move — including the case where the expensive option buys
+ * nothing. Numbers are precomputed; no network calls, no model, ~1.5 KB of JS.
+ */
+---
+
+<aside class="console glass" aria-label="Interactive retrieval evaluation">
+  <div class="head">
+    <span class="mono tiny id">eval / retrieval-v4</span>
+    <span class="mono tiny state" id="ev-state">passing</span>
+  </div>
+
+  <div class="controls">
+    <div class="group" role="group" aria-label="Chunk size">
+      <span class="mono tiny lbl glass-dim">chunk</span>
+      <div class="chips">
+        <button type="button" data-k="chunk" data-v="512" aria-pressed="true">512</button>
+        <button type="button" data-k="chunk" data-v="256" aria-pressed="false">256</button>
+      </div>
+    </div>
+
+    <div class="group" role="group" aria-label="Reranker">
+      <span class="mono tiny lbl glass-dim">reranker</span>
+      <div class="chips">
+        <button type="button" data-k="rerank" data-v="off" aria-pressed="true">off</button>
+        <button type="button" data-k="rerank" data-v="on" aria-pressed="false">on</button>
+      </div>
+    </div>
+
+    <div class="group" role="group" aria-label="Generation model">
+      <span class="mono tiny lbl glass-dim">model</span>
+      <div class="chips">
+        <button type="button" data-k="model" data-v="small" aria-pressed="true">8B</button>
+        <button type="button" data-k="model" data-v="large" aria-pressed="false">70B</button>
+      </div>
+    </div>
+  </div>
+
+  <ul class="bars">
+    <li>
+      <span class="mono tiny glass-dim">faithfulness</span>
+      <span class="track"><span class="fill" id="b-faith"></span></span>
+      <span class="mono tiny val" id="v-faith">0.71</span>
+    </li>
+    <li>
+      <span class="mono tiny glass-dim">context recall</span>
+      <span class="track"><span class="fill" id="b-recall"></span></span>
+      <span class="mono tiny val" id="v-recall">0.62</span>
+    </li>
+    <li>
+      <span class="mono tiny glass-dim">answer relevance</span>
+      <span class="track"><span class="fill" id="b-rel"></span></span>
+      <span class="mono tiny val" id="v-rel">0.74</span>
+    </li>
+    <li>
+      <span class="mono tiny glass-dim">hallucination</span>
+      <span class="track"><span class="fill low" id="b-hall"></span></span>
+      <span class="mono tiny val" id="v-hall">0.12</span>
+    </li>
+  </ul>
+
+  <div class="foot">
+    <div class="stats mono tiny glass-dim">
+      <span>p95 <b id="v-p95">620ms</b></span>
+      <span>cost <b id="v-cost">$0.0009</b></span>
+      <span>n=1,200</span>
+    </div>
+    <p class="verdict" id="ev-verdict" role="status" aria-live="polite">
+      Baseline. No reranking — retrieval is the bottleneck, not the model.
+    </p>
+  </div>
+</aside>
+
+<style>
+  .console {
+    padding: 1.3rem 1.35rem 1.2rem;
+    border-radius: 16px;
+    display: grid;
+    gap: 1.05rem;
+    width: 100%;
+  }
+
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: .8rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--glass-ink) 16%, transparent);
+  }
+
+  .mono { font-family: var(--f-mono); }
+
+  .tiny {
+    font-size: .68rem;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .id { color: var(--glass-ink); }
+
+  .state {
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    transition: color .3s;
+  }
+
+  .state::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .state[data-bad="true"] { color: var(--glass-ink-2); }
+
+  /* --- controls --- */
+
+  .controls {
+    display: grid;
+    gap: .6rem;
+  }
+
+  .group {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    align-items: center;
+    gap: .75rem;
+  }
+
+  .lbl { letter-spacing: .12em; }
+
+  .chips { display: flex; gap: .3rem; }
+
+  .chips button {
+    font-family: var(--f-mono);
+    font-size: .7rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    padding: .3rem .7rem;
+    border-radius: 7px;
+    cursor: pointer;
+    color: var(--glass-ink-2);
+    background: color-mix(in srgb, var(--glass-ink) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--glass-ink) 18%, transparent);
+    transition: color .2s, background-color .2s, border-color .2s, transform .2s;
+  }
+
+  .chips button:hover {
+    color: var(--glass-ink);
+    transform: translateY(-1px);
+  }
+
+  .chips button[aria-pressed="true"] {
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* --- bars --- */
+
+  .bars {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .75rem;
+  }
+
+  .bars li {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr 2.7rem;
+    align-items: center;
+    gap: .75rem;
+  }
+
+  .track {
+    height: 5px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--glass-ink) 16%, transparent);
+    overflow: hidden;
+  }
+
+  /* scaleX keeps this on the compositor — no layout on every update */
+  .fill {
+    display: block;
+    height: 100%;
+    width: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+    transform: scaleX(var(--v, 0));
+    transform-origin: left center;
+    transition: transform .55s cubic-bezier(.22,.68,.28,1);
+  }
+
+  .fill.low { background: var(--glass-ink-2); }
+
+  .val {
+    text-align: right;
+    color: var(--glass-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- foot --- */
+
+  .foot {
+    display: grid;
+    gap: .6rem;
+    padding-top: .85rem;
+    border-top: 1px solid color-mix(in srgb, var(--glass-ink) 16%, transparent);
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem 1.1rem;
+    text-transform: none;
+    letter-spacing: .05em;
+  }
+
+  .stats b {
+    color: var(--glass-ink);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .verdict {
+    font-size: .82rem;
+    line-height: 1.5;
+    color: var(--glass-ink-2);
+    min-height: 2.5em;
+  }
+
+  .verdict b { color: var(--accent); font-weight: 600; }
+
+  @media (max-width: 27rem) {
+    .bars li { grid-template-columns: 7rem 1fr 2.5rem; gap: .5rem; }
+    .group { grid-template-columns: 4.5rem 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fill { transition: none; }
+  }
+</style>
+
+<script>
+  type Row = {
+    faith: number; recall: number; rel: number; hall: number;
+    p95: number; cost: number; verdict: string; ok: boolean;
+  };
+
+  // Precomputed. The story these numbers tell: reranking is the real win,
+  // and the 70B model costs ~3.4x for a rounding error of faithfulness.
+  const TABLE: Record<string, Row> = {
+    '512|off|small':   { faith: .71, recall: .62, rel: .74, hall: .12, p95: 620,  cost: .0009,
+      ok: false, verdict: 'Baseline. No reranking — retrieval is the bottleneck, not the model.' },
+    '256|off|small':   { faith: .69, recall: .58, rel: .72, hall: .13, p95: 580,  cost: .0008,
+      ok: false, verdict: 'Smaller chunks <b>felt</b> sharper in the demo. Recall dropped 0.04. This is why you measure.' },
+    '512|on|small':    { faith: .93, recall: .89, rel: .90, hall: .04, p95: 840,  cost: .0021,
+      ok: true,  verdict: 'The reranker is the whole game: recall 0.62 → 0.89 for 220ms. <b>Ship this one.</b>' },
+    '256|on|small':    { faith: .91, recall: .85, rel: .88, hall: .05, p95: 790,  cost: .0019,
+      ok: true,  verdict: 'Reranking rescues the small chunks, but 512 still wins on recall.' },
+    '512|off|large':   { faith: .73, recall: .62, rel: .79, hall: .11, p95: 1520, cost: .0031,
+      ok: false, verdict: '3.4× the cost. Faithfulness +0.02, recall unchanged — you cannot fix retrieval with a bigger model.' },
+    '256|off|large':   { faith: .71, recall: .58, rel: .77, hall: .12, p95: 1480, cost: .0029,
+      ok: false, verdict: 'Worst value on the board: pays for the large model and keeps the recall problem.' },
+    '512|on|large':    { faith: .94, recall: .89, rel: .93, hall: .03, p95: 1740, cost: .0072,
+      ok: true,  verdict: 'Best scores — and <b>3.4× the cost of the 8B for +0.01 faithfulness.</b> We kept the 8B.' },
+    '256|on|large':    { faith: .92, recall: .85, rel: .91, hall: .04, p95: 1690, cost: .0068,
+      ok: true,  verdict: 'Expensive and still behind 512-chunk on recall.' },
+  };
+
+  const state = { chunk: '512', rerank: 'off', model: 'small' };
+
+  const $ = (id: string) => document.getElementById(id);
+
+  function render() {
+    const row = TABLE[`${state.chunk}|${state.rerank}|${state.model}`];
+    if (!row) return;
+
+    const set = (bar: string, val: string, v: number, text: string) => {
+      $(bar)?.style.setProperty('--v', String(v));
+      const el = $(val);
+      if (el) el.textContent = text;
+    };
+
+    set('b-faith',  'v-faith',  row.faith,  row.faith.toFixed(2));
+    set('b-recall', 'v-recall', row.recall, row.recall.toFixed(2));
+    set('b-rel',    'v-rel',    row.rel,    row.rel.toFixed(2));
+    // Hallucination is inverted: low is good, so scale it up to stay visible.
+    set('b-hall',   'v-hall',   Math.min(row.hall * 4, 1), row.hall.toFixed(2));
+
+    const p95 = $('v-p95');
+    if (p95) p95.textContent = `${row.p95}ms`;
+    const cost = $('v-cost');
+    if (cost) cost.textContent = `$${row.cost.toFixed(4)}`;
+
+    const verdict = $('ev-verdict');
+    if (verdict) verdict.innerHTML = row.verdict;
+
+    const st = $('ev-state');
+    if (st) {
+      st.textContent = row.ok ? 'passing' : 'below gate';
+      st.dataset.bad = String(!row.ok);
+    }
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.chips button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const k = btn.dataset.k as keyof typeof state;
+      const v = btn.dataset.v!;
+      if (!k || state[k] === v) return;
+      state[k] = v;
+
+      btn.parentElement
+        ?.querySelectorAll<HTMLButtonElement>('button')
+        .forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+
+      render();
+    });
+  });
+
+  render();
+</script>

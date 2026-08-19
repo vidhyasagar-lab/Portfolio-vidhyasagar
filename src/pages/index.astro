@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import ProjectCard from '../components/ProjectCard.astro';
+import EvalConsole from '../components/EvalConsole.astro';
 import { site } from '../site';
 
 const projects = (await getCollection('projects', ({ data }) => !data.draft))
@@ -12,6 +13,7 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
   {/* ---------------- HERO ---------------- */}
   <section class="hero">
     <div class="mesh" aria-hidden="true"></div>
+    <p class="field-hint mono-label">Drag to rotate · scroll to separate clusters</p>
 
     <div class="shell hero-grid">
       <div class="hero-copy">
@@ -19,8 +21,16 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
           <span class="pulse" aria-hidden="true"></span>{site.status}
         </p>
 
-        <h1 class="rise" style="animation-delay:.14s">
-          I make model output<br /><em>measurable</em>.
+        {/* Kinetic type: each word rises from behind its own mask. */}
+        <h1 class="kinetic">
+          <span class="ln">
+            {['I', 'make', 'model', 'output'].map((w, i) => (
+              <span class="msk"><i style={`--d:${120 + i * 65}ms`}>{w}</i></span>
+            ))}
+          </span>
+          <span class="ln">
+            <span class="msk"><i class="hl" style="--d:400ms">measurable.</i></span>
+          </span>
         </h1>
 
         <p class="lede rise" style="animation-delay:.24s">{site.blurb}</p>
@@ -31,40 +41,10 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
         </div>
       </div>
 
-      {/* The most characteristic object in this field: an eval scoreboard. */}
-      <aside class="panel glass rise" style="animation-delay:.42s" aria-label="Representative evaluation run">
-        <div class="panel-head">
-          <span class="mono tiny">eval / retrieval-v4</span>
-          <span class="mono tiny ok">passing</span>
-        </div>
-
-        <ul class="bars">
-          <li>
-            <span class="mono tiny glass-dim">faithfulness</span>
-            <span class="track" role="img" aria-label="0.94"><span class="fill" style="--v:94%"></span></span>
-            <span class="mono tiny val">0.94</span>
-          </li>
-          <li>
-            <span class="mono tiny glass-dim">context recall</span>
-            <span class="track" role="img" aria-label="0.89"><span class="fill" style="--v:89%"></span></span>
-            <span class="mono tiny val">0.89</span>
-          </li>
-          <li>
-            <span class="mono tiny glass-dim">answer relevance</span>
-            <span class="track" role="img" aria-label="0.91"><span class="fill" style="--v:91%"></span></span>
-            <span class="mono tiny val">0.91</span>
-          </li>
-          <li>
-            <span class="mono tiny glass-dim">hallucination</span>
-            <span class="track" role="img" aria-label="0.03"><span class="fill low" style="--v:6%"></span></span>
-            <span class="mono tiny val">0.03</span>
-          </li>
-        </ul>
-
-        <p class="panel-foot mono tiny glass-dim">
-          p95 latency 840ms · $0.0021/query · n=1,200
-        </p>
-      </aside>
+      {/* The most characteristic object in this field, made operable. */}
+      <div class="panel-wrap rise" style="animation-delay:.42s">
+        <EvalConsole />
+      </div>
     </div>
   </section>
 
@@ -95,6 +75,7 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
             live={p.data.live}
             outcomes={p.data.outcomes}
             index={i}
+            slug={p.id}
           />
         ))}
       </div>
@@ -123,7 +104,7 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
           d: 'Language models fail confidently. The interesting engineering is in detecting low-confidence output, falling back gracefully, and making the failure legible to the user.',
         },
       ].map((t, i) => (
-        <article class="tenet neu reveal" style={`transition-delay:${i * 90}ms`}>
+        <article data-tilt class="tenet neu reveal" style={`transition-delay:${i * 90}ms`}>
           <h3>{t.n}</h3>
           <p>{t.d}</p>
         </article>
@@ -176,6 +157,26 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
 
   .hero-copy { display: grid; gap: 1.4rem; justify-items: start; }
 
+  /* Sits above the canvas but must not intercept the drag. */
+  .field-hint {
+    position: absolute;
+    right: var(--rail);
+    bottom: 1.1rem;
+    z-index: 2;
+    pointer-events: none;
+    font-size: .62rem;
+    opacity: .75;
+  }
+
+  @media (max-width: 60rem) {
+    .field-hint { display: none; }
+  }
+
+  /* The copy and console sit over the field; let drags through the gaps. */
+  .hero-grid { pointer-events: none; }
+  .hero-copy > *,
+  .panel-wrap { pointer-events: auto; }
+
   .pulse {
     display: inline-block;
     width: 7px; height: 7px;
@@ -198,10 +199,42 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
     letter-spacing: -.045em;
   }
 
-  h1 em {
+  /* --- kinetic type --- */
+
+  .kinetic .ln {
+    display: block;
+    /* The mask clips to the line box; padding stops descenders being sheared. */
+    overflow: hidden;
+    padding-bottom: .12em;
+    margin-bottom: -.12em;
+  }
+
+  .kinetic .msk {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding-bottom: .1em;
+    margin-bottom: -.1em;
+  }
+
+  .kinetic .msk + .msk { margin-left: .26em; }
+
+  .kinetic i {
+    display: inline-block;
     font-style: normal;
-    color: var(--accent);
-    position: relative;
+    transform: translate3d(0, 108%, 0);
+    animation: kin .85s cubic-bezier(.19, .84, .28, 1) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+
+  .kinetic .hl { color: var(--accent); }
+
+  @keyframes kin {
+    to { transform: translate3d(0, 0, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kinetic i { transform: none; animation: none; }
   }
 
   .lede {

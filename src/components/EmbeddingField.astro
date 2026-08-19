@@ -1,0 +1,349 @@
+---
+/**
+ * Pinned 3D embedding field — one canvas for the whole document.
+ *
+ * The expert pattern: a fixed WebGL canvas that stays put while the page
+ * scrolls over it, with scroll driving the scene rather than the page position.
+ *
+ * Narrative: at the top the points sit as one undifferentiated cloud. Scrolling
+ * separates them into clusters and rotates the view — structure emerging from a
+ * corpus, which is the argument the site is making.
+ *
+ * Readability: alpha drops sharply after the first viewport, so it stays a
+ * presence behind reading material rather than competing with it.
+ *
+ * Raw WebGL, no Three.js. One draw call, zero triangles, no post-processing,
+ * no shadow maps. Measures real frame time and sheds work on weak GPUs.
+ */
+
+interface Props {
+  points?: number;
+}
+
+const { points = 2400 } = Astro.props;
+---
+
+<canvas class="efield" data-points={points} aria-hidden="true"></canvas>
+
+<style>
+  .efield {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+    pointer-events: none; /* drag is handled on document, see script */
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .efield { display: none; }
+  }
+</style>
+
+<script>
+  const cvs = document.querySelector<HTMLCanvasElement>('.efield');
+  if (cvs) init(cvs);
+
+  function init(cvs: HTMLCanvasElement) {
+    const gl = cvs.getContext('webgl', {
+      antialias: true,
+      alpha: true,
+      premultipliedAlpha: false,
+      powerPreference: 'low-power',
+    });
+    if (!gl) return; // no WebGL: the CSS aurora behind still reads
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const N = Number(cvs.dataset.points) || 2400;
+
+    /* ---------- geometry ---------- */
+
+    const CLUSTERS = [
+      [ 0.00,  0.10,  0.00],
+      [ 0.62, -0.28, -0.30],
+      [-0.58,  0.34,  0.26],
+      [ 0.30,  0.52, -0.46],
+      [-0.36, -0.50,  0.40],
+    ];
+
+    const gauss = () => {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+
+    const ctr = new Float32Array(N * 3);
+    const off = new Float32Array(N * 3);
+    const cid = new Float32Array(N);
+
+    for (let i = 0; i < N; i++) {
+      const c = i % CLUSTERS.length; // interleaved: a prefix keeps every cluster
+      const s = 0.20 + (c === 0 ? 0.08 : 0);
+      ctr[i * 3] = CLUSTERS[c][0];
+      ctr[i * 3 + 1] = CLUSTERS[c][1];
+      ctr[i * 3 + 2] = CLUSTERS[c][2];
+      off[i * 3] = gauss() * s;
+      off[i * 3 + 1] = gauss() * s;
+      off[i * 3 + 2] = gauss() * s;
+      cid[i] = c;
+    }
+
+    /* ---------- shaders ---------- */
+
+    const VS = `
+      attribute vec3 aCtr;
+      attribute vec3 aOff;
+      attribute float aCid;
+      uniform vec2  uRot;
+      uniform float uSpread;
+      uniform float uAspect;
+      uniform float uSize;
+      uniform vec3  uPal[5];
+      varying float vFade;
+      varying vec3  vCol;
+      void main() {
+        vec3 p = aCtr * uSpread + aOff * mix(1.5, 1.0, clamp(uSpread, 0.0, 1.0));
+
+        float cy = cos(uRot.x), sy = sin(uRot.x);
+        float cx = cos(uRot.y), sx = sin(uRot.y);
+        p = vec3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy);
+        p = vec3(p.x, p.y * cx - p.z * sx, p.y * sx + p.z * cx);
+
+        float zc = 2.85 + p.z;
+        vec2 proj = p.xy / zc * 2.6;
+        gl_Position = vec4(proj.x / uAspect, proj.y, 0.0, 1.0);
+        gl_PointSize = uSize * (2.2 / zc);
+
+        vFade = clamp((3.9 - zc) * 0.78, 0.16, 1.0);
+        int k = int(aCid + 0.5);
+        vCol = k == 0 ? uPal[0] : k == 1 ? uPal[1] : k == 2 ? uPal[2]
+             : k == 3 ? uPal[3] : uPal[4];
+      }
+    `;
+
+    const FS = `
+      precision mediump float;
+      varying float vFade;
+      varying vec3  vCol;
+      uniform float uAlpha;
+      void main() {
+        vec2 c = gl_PointCoord - 0.5;
+        float d = dot(c, c);
+        if (d > 0.25) discard;
+        float a = smoothstep(0.25, 0.015, d);
+        gl_FragColor = vec4(vCol, a * vFade * uAlpha);
+      }
+    `;
+
+    const compile = (type: number, src: string) => {
+      const s = gl.createShader(type)!;
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.warn('shader:', gl.getShaderInfoLog(s));
+        return null;
+      }
+      return s;
+    };
+
+    const vs = compile(gl.VERTEX_SHADER, VS);
+    const fs = compile(gl.FRAGMENT_SHADER, FS);
+    if (!vs || !fs) return;
+
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+    gl.useProgram(prog);
+
+    const bind = (data: Float32Array, name: string, size: number) => {
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, name);
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+    };
+
+    bind(ctr, 'aCtr', 3);
+    bind(off, 'aOff', 3);
+    bind(cid, 'aCid', 1);
+
+    const uRot = gl.getUniformLocation(prog, 'uRot');
+    const uSpread = gl.getUniformLocation(prog, 'uSpread');
+    const uAspect = gl.getUniformLocation(prog, 'uAspect');
+    const uSize = gl.getUniformLocation(prog, 'uSize');
+    const uAlpha = gl.getUniformLocation(prog, 'uAlpha');
+    const uPal = gl.getUniformLocation(prog, 'uPal[0]');
+
+    /* ---------- theme ---------- */
+
+    const hex = (h: string) => [
+      parseInt(h.slice(1, 3), 16) / 255,
+      parseInt(h.slice(3, 5), 16) / 255,
+      parseInt(h.slice(5, 7), 16) / 255,
+    ];
+
+    const DARK  = ['#F0A02E', '#4FB9A2', '#6E86C8', '#D2794C', '#8FA3B8'];
+    const LIGHT = ['#B26100', '#2E7F6C', '#41539B', '#9B4A22', '#5A6B7D'];
+
+    let baseAlpha = 0.95;
+
+    const isDark = () => {
+      const t = document.documentElement.dataset.theme;
+      return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    };
+
+    function applyTheme() {
+      const dark = isDark();
+      gl.uniform3fv(uPal, new Float32Array((dark ? DARK : LIGHT).flatMap(hex)));
+      baseAlpha = dark ? 0.95 : 0.60;
+      // Additive glow reads on near-black; it would wash out on paper.
+      gl.blendFunc(gl.SRC_ALPHA, dark ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
+    }
+
+    gl.enable(gl.BLEND);
+    applyTheme();
+
+    new MutationObserver(() => { applyTheme(); draw(); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => { applyTheme(); draw(); });
+
+    /* ---------- adaptive quality ---------- */
+
+    let tier = 2, drawN = N, dprCap = 2;
+    let acc = 0, samples = 0;
+
+    function applyTier() {
+      drawN = tier === 2 ? N : tier === 1 ? Math.floor(N * 0.55) : Math.floor(N * 0.3);
+      dprCap = tier === 2 ? 2 : tier === 1 ? 1.5 : 1;
+      resize();
+    }
+
+    function measure(dt: number) {
+      if (tier === 0) return;
+      acc += dt;
+      if (++samples < 45) return;
+      const avg = acc / samples;
+      acc = 0; samples = 0;
+      if (avg > 23) { tier--; applyTier(); } // sustained sub-43fps
+    }
+
+    /* ---------- sizing ---------- */
+
+    function resize() {
+      const dpr = Math.min(devicePixelRatio || 1, dprCap);
+      const w = Math.max(1, Math.round(innerWidth * dpr));
+      const h = Math.max(1, Math.round(innerHeight * dpr));
+      cvs.width = w;
+      cvs.height = h;
+      gl.viewport(0, 0, w, h);
+      gl.uniform1f(uAspect, w / h);
+      gl.uniform1f(uSize, Math.max(2.0, 4.0 * dpr));
+    }
+
+    addEventListener('resize', () => { resize(); draw(); }, { passive: true });
+    resize();
+
+    /* ---------- scroll scrub (whole document) ---------- */
+
+    let scrollT = 0;   // 0..1 across the entire page
+    let firstT = 0;    // 0..1 across the first viewport only
+    let queued = false;
+
+    function readScroll() {
+      queued = false;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const y = scrollY;
+      scrollT = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+      firstT = Math.min(1, Math.max(0, y / (innerHeight || 1)));
+    }
+
+    addEventListener('scroll', () => {
+      if (!queued) { queued = true; requestAnimationFrame(readScroll); }
+    }, { passive: true });
+
+    readScroll();
+
+    /* ---------- drag ----------
+       Canvas is pointer-events:none and sits behind content, so listen on the
+       document and ignore anything that started on real UI or on text.        */
+
+    const IGNORE = 'a,button,input,textarea,select,label,[data-tilt],.prose,h1,h2,h3,p,li,dl';
+
+    let yaw = 0.4, pitch = -0.12;
+    let velY = 0, velP = 0;
+    let dragging = false, lastX = 0, lastY = 0;
+
+    addEventListener('pointerdown', (e) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest(IGNORE)) return;
+      dragging = true;
+      lastX = e.clientX; lastY = e.clientY;
+    });
+
+    addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      velY = (e.clientX - lastX) * 0.005;
+      velP = (e.clientY - lastY) * 0.004;
+      yaw += velY;
+      pitch = Math.max(-1.0, Math.min(1.0, pitch + velP));
+      lastX = e.clientX; lastY = e.clientY;
+      if (reduced) draw();
+    }, { passive: true });
+
+    const release = () => { dragging = false; };
+    addEventListener('pointerup', release);
+    addEventListener('pointercancel', release);
+
+    /* ---------- loop ---------- */
+
+    let spread = 0.42;
+
+    function draw() {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniform2f(uRot, yaw + scrollT * 2.1, pitch + scrollT * 0.3);
+      gl.uniform1f(uSpread, spread);
+      // Step back behind reading material, but stay clearly present.
+      gl.uniform1f(uAlpha, baseAlpha * (1 - firstT * 0.22));
+      gl.drawArrays(gl.POINTS, 0, drawN);
+    }
+
+    let raf = 0, last = 0;
+
+    function frame(now: number) {
+      const dt = last ? now - last : 16;
+      last = now;
+      measure(dt);
+
+      if (!dragging) {
+        velY += (0.0016 - velY) * 0.03;
+        yaw += velY;
+        velP *= 0.92;
+        pitch += velP;
+      }
+
+      // Clusters separate the further down the page you are. Capped: past ~1.05
+      // they disperse far enough that the field reads as empty rather than open.
+      const target = 0.42 + scrollT * 0.63;
+      spread += (target - spread) * 0.07;
+
+      draw();
+      raf = requestAnimationFrame(frame);
+    }
+
+    const start = () => { if (!raf && !reduced) { last = 0; raf = requestAnimationFrame(frame); } };
+    const stop = () => { if (raf) { cancelAnimationFrame(raf); raf = 0; } };
+
+    document.addEventListener('visibilitychange', () => {
+      document.hidden ? stop() : start();
+    });
+
+    draw();
+    start();
+  }
+</script>

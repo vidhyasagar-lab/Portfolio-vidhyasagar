@@ -17,6 +17,9 @@ const d = project.data;
 ---
 
 <Base title={`${d.title} — ${site.name}`} description={d.tagline}>
+  {/* Scroll-driven, pure CSS. Hidden entirely where unsupported. */}
+  <div class="read-progress" aria-hidden="true"></div>
+
   <article>
     {/* --------- header --------- */}
     <header class="head">
@@ -28,7 +31,7 @@ const d = project.data;
         </a>
 
         <p class="mono-label rise" style="animation-delay:.05s">{d.period} · {d.role}</p>
-        <h1 class="rise" style="animation-delay:.12s">{d.title}</h1>
+        <h1 style={`view-transition-name: t-${project.id}`}>{d.title}</h1>
         <p class="tagline rise" style="animation-delay:.2s">{d.tagline}</p>
 
         <div class="actions rise" style="animation-delay:.28s">
@@ -48,7 +51,7 @@ const d = project.data;
 
     {/* --------- at a glance --------- */}
     <section class="shell glance-wrap">
-      <div class="glance glass reveal">
+      <div data-tilt class="glance glass reveal">
         <div class="glance-col">
           <p class="mono-label">The hard part</p>
           <p class="problem">{d.problem}</p>
