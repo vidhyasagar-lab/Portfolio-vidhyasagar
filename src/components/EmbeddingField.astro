@@ -187,8 +187,9 @@ const { points = 2400 } = Astro.props;
       parseInt(h.slice(5, 7), 16) / 255,
     ];
 
-    const DARK  = ['#F0A02E', '#4FB9A2', '#6E86C8', '#D2794C', '#8FA3B8'];
-    const LIGHT = ['#B26100', '#2E7F6C', '#41539B', '#9B4A22', '#5A6B7D'];
+    // One warm accent cluster + four cool analogous. Narrow range, single accent.
+    const DARK  = ['#F0A02E', '#4FA79E', '#5C82A8', '#7E93AE', '#93A6B6'];
+    const LIGHT = ['#B26100', '#3E7C82', '#41608F', '#5A7390', '#6B7F92'];
 
     let baseAlpha = 0.95;
 

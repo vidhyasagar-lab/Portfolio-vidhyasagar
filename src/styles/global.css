@@ -45,19 +45,18 @@
   --neu-border:  rgba(16, 20, 26, .16);
 
   /* --- mesh backdrop stops (controlled backgrounds only) --- */
-  --mesh-1: #9FC9BE;
-  --mesh-2: #E8CFA0;
-  --mesh-3: #A8B4D6;
+  --mesh-1: #9DBAC0;
+  --mesh-2: #B6C4CC;
+  --mesh-3: #A8B6C6;
   --mesh-alpha: .16;
 
   /* --- ambient page field --- */
-  --au-1: #7FB6A6;   /* teal */
-  --au-2: #E4B573;   /* sand */
-  --au-3: #92A2D2;   /* periwinkle */
-  --au-alpha: .38;
-  --grid-line: rgba(16, 20, 26, .075);
-  --grid-size: 46px;
-  --grain-alpha: .035;
+  --au-1: #9DBAC0;   /* pale slate-teal */
+  --au-2: #B6C4CC;   /* cool grey-blue */
+  --au-3: #A8B6C6;   /* soft steel */
+  --au-alpha: .30;
+  --grain-alpha: .04;
+  --vignette: rgba(120, 132, 140, .30);
 
   /* --- type --- */
   --f-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
@@ -72,9 +71,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg:          #080B10;
-    --bg-deep:     #04060A;
-    --surface:     #10151D;
+    --bg:          #0D1116;
+    --bg-deep:     #080B0F;
+    --surface:     #141A22;
     --surface-2:   #171D27;
 
     --ink:         #EDF1F5;
@@ -101,25 +100,24 @@
     --neu-dark:    rgba(0, 0, 0, .55);
     --neu-border:  rgba(255, 255, 255, .16);
 
-    --mesh-1: #1E6E63;
-    --mesh-2: #8A5A18;
-    --mesh-3: #2F3D6B;
+    --mesh-1: #16565C;
+    --mesh-2: #123B52;
+    --mesh-3: #1B2F4D;
     --mesh-alpha: .20;
 
-    --au-1: #1B7A6B;
-    --au-2: #A66A12;
-    --au-3: #33417A;
-    --au-alpha: .50;
-    --grid-line: rgba(180, 200, 225, .055);
-    --grid-size: 46px;
-    --grain-alpha: .05;
+    --au-1: #16565C;
+    --au-2: #123B52;
+    --au-3: #1B2F4D;
+    --au-alpha: .28;
+    --grain-alpha: .055;
+    --vignette: rgba(0, 0, 0, .72);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg:          #080B10;
-  --bg-deep:     #04060A;
-  --surface:     #10151D;
+  --bg:          #0D1116;
+  --bg-deep:     #080B0F;
+  --surface:     #141A22;
   --surface-2:   #171D27;
 
   --ink:         #EDF1F5;
@@ -146,18 +144,17 @@
   --neu-dark:    rgba(0, 0, 0, .55);
   --neu-border:  rgba(255, 255, 255, .16);
 
-  --mesh-1: #1E6E63;
-  --mesh-2: #8A5A18;
-  --mesh-3: #2F3D6B;
+  --mesh-1: #16565C;
+  --mesh-2: #123B52;
+  --mesh-3: #1B2F4D;
   --mesh-alpha: .20;
 
-  --au-1: #1B7A6B;
-  --au-2: #A66A12;
-  --au-3: #33417A;
-  --au-alpha: .50;
-  --grid-line: rgba(180, 200, 225, .055);
-  --grid-size: 46px;
-  --grain-alpha: .05;
+  --au-1: #16565C;
+  --au-2: #123B52;
+  --au-3: #1B2F4D;
+  --au-alpha: .28;
+  --grain-alpha: .055;
+  --vignette: rgba(0, 0, 0, .72);
 }
 
 /* expose tokens to Tailwind v4 utilities */
@@ -367,17 +364,19 @@ img { max-width: 100%; height: auto; display: block; }
   animation: drift-c 50s ease-in-out infinite alternate;
 }
 
-/* Measurement grid, faded out toward the edges so it never boxes the page in. */
-.ambient .grid {
+/* Vignette. The single highest-impact move on a dark ground: darken the edges
+   so the centre holds attention instead of the field competing edge to edge.
+   Sits above the aurora, below the grain. */
+.ambient .vig {
   position: absolute;
   inset: 0;
   display: block;
-  background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-  background-size: var(--grid-size) var(--grid-size);
-  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 35%, #000 30%, transparent 78%);
-  mask-image: radial-gradient(ellipse 90% 70% at 50% 35%, #000 30%, transparent 78%);
+  background: radial-gradient(
+    ellipse 78% 68% at 50% 42%,
+    transparent 0%,
+    transparent 42%,
+    var(--vignette) 100%
+  );
 }
 
 .ambient .grain {

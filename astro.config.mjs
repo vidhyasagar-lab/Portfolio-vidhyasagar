@@ -22,5 +22,12 @@ export default defineConfig({
   integrations: [mdx()],
   vite: {
     plugins: [tailwind()],
+    server: {
+      watch: {
+        // Build output lives inside the project root; without this the dev
+        // server re-scans it on every `astro build` and spins indefinitely.
+        ignored: ['**/dist/**', '**/.vercel/**', '**/.astro/**'],
+      },
+    },
   },
 });

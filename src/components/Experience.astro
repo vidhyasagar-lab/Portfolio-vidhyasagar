@@ -1,0 +1,314 @@
+---
+import { getCollection } from 'astro:content';
+
+const roles = (await getCollection('experience', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.order - a.data.order);
+---
+
+{roles.length > 0 && (
+  <ol class="rail">
+    {roles.map((r, i) => (
+      <li class="role reveal" style={`transition-delay:${i * 80}ms`}>
+        <span class="node" aria-hidden="true" data-current={r.data.current ? 'true' : 'false'}></span>
+
+        {/* --- identity: the layer-cake heading people scan --- */}
+        <header class="who">
+          <h3>{r.data.role}</h3>
+          <p class="meta mono">
+            <span class="co">{r.data.company}</span>
+            <span class="sep" aria-hidden="true">/</span>
+            <span>{r.data.period}</span>
+            {r.data.current && <span class="now">Current</span>}
+          </p>
+        </header>
+
+        {/* --- impact first: the strongest scan target, not buried --- */}
+        {r.data.impact.length > 0 && (
+          <dl class="impact">
+            {r.data.impact.map((m) => (
+              <div>
+                <dt>{m.metric}</dt>
+                <dd>{m.label}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        <p class="summary">{r.data.summary}</p>
+
+        {/* --- front-loaded: keyword leads, prose follows --- */}
+        {r.data.owned.length > 0 && (
+          <div class="block">
+            <p class="mono-label sub">What I owned</p>
+            <ul class="facts">
+              {r.data.owned.map((o) => (
+                <li><b>{o.label}</b><span>{o.detail}</span></li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* --- progressive disclosure: summary visible, depth on demand --- */}
+        {r.data.platforms.length > 0 && (
+          <div class="block">
+            <p class="mono-label sub">Platforms built</p>
+            <div class="plats">
+              {r.data.platforms.map((p) => (
+                <details class="plat">
+                  <summary>
+                    <span class="chev" aria-hidden="true"></span>
+                    <span class="pname">{p.name}</span>
+                    <span class="pdesc">{p.description}</span>
+                  </summary>
+                  {p.highlights.length > 0 && (
+                    <ul class="facts inner">
+                      {p.highlights.map((hl) => (
+                        <li><b>{hl.label}</b><span>{hl.detail}</span></li>
+                      ))}
+                    </ul>
+                  )}
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {r.data.stack.length > 0 && (
+          <ul class="stack">
+            {r.data.stack.map((s) => <li class="mono">{s}</li>)}
+          </ul>
+        )}
+      </li>
+    ))}
+  </ol>
+)}
+
+<style>
+  .rail { list-style: none; margin: 0; padding: 0; }
+
+  .role {
+    position: relative;
+    display: grid;
+    gap: 1.35rem;
+    padding: 0 0 1rem 1.65rem;
+    border-left: 1px solid var(--line);
+  }
+
+  .node {
+    position: absolute;
+    left: 0; top: .55rem;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+  }
+
+  .node[data-current="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+
+  /* --- level 1: role --- */
+
+  .who { display: grid; gap: .4rem; }
+
+  h3 {
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    letter-spacing: -.03em;
+    color: var(--ink);
+  }
+
+  .mono { font-family: var(--f-mono); }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .co { color: var(--accent); }
+  .sep { color: var(--line-strong); }
+
+  .now {
+    font-size: .6rem;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+
+  /* --- level 2: impact, promoted to the top --- */
+
+  .impact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 2.5rem;
+    margin: 0;
+    padding: 1rem 0;
+    border-block: 1px solid var(--line);
+  }
+
+  .impact div { display: grid; gap: .1rem; }
+
+  .impact dt {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(1.8rem, 3.6vw, 2.4rem);
+    line-height: 1;
+    letter-spacing: -.045em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .impact dd {
+    margin: 0;
+    font-size: .75rem;
+    line-height: 1.35;
+    color: var(--ink-3);
+    max-width: 15ch;
+  }
+
+  /* --- level 3: body --- */
+
+  .summary {
+    max-width: 58ch;
+    color: var(--ink-2);
+    font-size: 1.02rem;
+    line-height: 1.6;
+  }
+
+  .block { display: grid; gap: .7rem; }
+
+  .sub { color: var(--ink-3); }
+
+  /* Front-loaded facts: bold label leads, detail follows on its own line. */
+  .facts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .6rem;
+    max-width: 66ch;
+  }
+
+  .facts li {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .1rem;
+  }
+
+  @media (min-width: 46rem) {
+    .facts li {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: 1.25rem;
+      align-items: baseline;
+    }
+  }
+
+  .facts b {
+    font-weight: 600;
+    font-size: .92rem;
+    color: var(--ink);
+    letter-spacing: -.005em;
+  }
+
+  .facts span {
+    font-size: .92rem;
+    line-height: 1.55;
+    color: var(--ink-3);
+  }
+
+  /* --- progressive disclosure --- */
+
+  .plats { display: grid; gap: .5rem; }
+
+  .plat {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 50%, transparent);
+    transition: border-color .25s;
+  }
+
+  .plat[open] { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+
+  summary {
+    cursor: pointer;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1.1rem 1fr;
+    gap: .1rem .6rem;
+    padding: .85rem 1rem;
+    align-items: baseline;
+  }
+
+  summary::-webkit-details-marker { display: none; }
+
+  @media (min-width: 46rem) {
+    summary { grid-template-columns: 1.1rem 11.9rem minmax(0, 1fr); gap: 1.25rem; }
+    summary .chev { margin-right: -1rem; }
+  }
+
+  .chev {
+    width: 0; height: 0;
+    border-left: 5px solid var(--accent);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transform: translateY(-1px);
+    transition: transform .22s ease;
+  }
+
+  .plat[open] .chev { transform: rotate(90deg) translateX(-1px); }
+
+  .pname {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: .96rem;
+    color: var(--ink);
+  }
+
+  .pdesc {
+    font-size: .9rem;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+
+  .facts.inner {
+    padding: 0 1rem 1rem;
+    margin-top: -.15rem;
+  }
+
+  @media (min-width: 46rem) {
+    .facts.inner { padding-left: 2.85rem; }
+    .facts.inner li { grid-template-columns: 11rem minmax(0, 1fr); }
+  }
+
+  /* --- stack --- */
+
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .stack li {
+    font-size: .66rem;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: .24rem .6rem;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    color: var(--ink-3);
+  }
+</style>

@@ -1,0 +1,129 @@
+---
+import { getCollection } from 'astro:content';
+
+const roles = (await getCollection('experience', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.order - a.data.order);
+---
+
+{roles.length > 0 && (
+  <ul class="list">
+    {roles.map((r, i) => (
+      <li class="row reveal" style={`transition-delay:${i * 80}ms`}>
+        <div class="when mono">
+          <span>{r.data.period}</span>
+          {r.data.current && <span class="dot" aria-hidden="true"></span>}
+        </div>
+
+        <div class="what">
+          <h3>{r.data.company}</h3>
+          <p class="role mono">{r.data.role}</p>
+          <p class="desc">{r.data.summary}</p>
+        </div>
+
+        <dl class="figs">
+          {r.data.impact.slice(0, 2).map((m) => (
+            <div>
+              <dt>{m.metric}</dt>
+              <dd>{m.label}</dd>
+            </div>
+          ))}
+        </dl>
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .list { list-style: none; margin: 0; padding: 0; display: grid; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .75rem;
+    padding: 1.75rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .row:last-child { border-bottom: 1px solid var(--line); }
+
+  /* Dates left, detail centre, figures right — the F-pattern scan order. */
+  @media (min-width: 62rem) {
+    .row {
+      grid-template-columns: 10rem minmax(0, 1fr) 14rem;
+      gap: 2.5rem;
+      align-items: start;
+    }
+  }
+
+  .mono { font-family: var(--f-mono); }
+
+  .when {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding-top: .35rem;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .what { display: grid; gap: .3rem; }
+
+  h3 {
+    font-size: clamp(1.3rem, 2.5vw, 1.65rem);
+    letter-spacing: -.03em;
+    color: var(--ink);
+  }
+
+  .role {
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .desc {
+    margin-top: .35rem;
+    max-width: 54ch;
+    font-size: .97rem;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+
+  .figs {
+    display: flex;
+    gap: 1.75rem;
+    margin: 0;
+    padding-top: .2rem;
+  }
+
+  .figs div { display: grid; gap: .1rem; }
+
+  .figs dt {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: 1.6rem;
+    line-height: 1;
+    letter-spacing: -.04em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .figs dd {
+    margin: 0;
+    font-size: .7rem;
+    line-height: 1.35;
+    color: var(--ink-3);
+    max-width: 13ch;
+  }
+</style>

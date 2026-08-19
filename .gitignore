@@ -9,3 +9,8 @@ dist/
 
 # Working document, not part of the site
 research-report.html
+
+# Source resume + extracted text: contain a phone number. Never commit.
+*.docx
+*.doc
+resume.txt

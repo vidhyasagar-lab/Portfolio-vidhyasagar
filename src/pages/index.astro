@@ -3,7 +3,8 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import EvalConsole from '../components/EvalConsole.astro';
-import { site } from '../site';
+import ExperienceCompact from '../components/ExperienceCompact.astro';
+import { site, cv } from '../site';
 
 const projects = (await getCollection('projects', ({ data }) => !data.draft))
   .sort((a, b) => a.data.order - b.data.order);
@@ -24,12 +25,12 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
         {/* Kinetic type: each word rises from behind its own mask. */}
         <h1 class="kinetic">
           <span class="ln">
-            {['I', 'make', 'model', 'output'].map((w, i) => (
+            {['I', 'build', 'agents', 'that'].map((w, i) => (
               <span class="msk"><i style={`--d:${120 + i * 65}ms`}>{w}</i></span>
             ))}
           </span>
           <span class="ln">
-            <span class="msk"><i class="hl" style="--d:400ms">measurable.</i></span>
+            <span class="msk"><i class="hl" style="--d:400ms">finish the work.</i></span>
           </span>
         </h1>
 
@@ -37,6 +38,7 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
 
         <div class="cta rise" style="animation-delay:.34s">
           <a class="btn-primary" href="#work">See the work</a>
+          <a class="btn-ghost" href={cv} download>Download CV</a>
           <a class="btn-ghost" href={`mailto:${site.email}`}>Get in touch</a>
         </div>
       </div>
@@ -48,15 +50,27 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
     </div>
   </section>
 
+  {/* ---------------- EXPERIENCE ---------------- */}
+  <section id="experience" class="shell block">
+    <header class="block-head reveal">
+      <p class="mono-label">Experience</p>
+      <h2>Where the constraints were real.</h2>
+      <p class="prose">Production systems, private repositories. What I owned and what changed.</p>
+    </header>
+
+    <ExperienceCompact />
+
+    <p class="more reveal">
+      <a href="/experience">Full CV — skills, certifications, education <span aria-hidden="true">&rarr;</span></a>
+    </p>
+  </section>
+
   {/* ---------------- WORK ---------------- */}
   <section id="work" class="shell block">
     <header class="block-head reveal">
       <p class="mono-label">Selected work</p>
       <h2>Three systems, and what each one taught me.</h2>
-      <p class="prose">
-        Every project below links to its source and a running deployment. The write-ups cover
-        what I owned, the constraint I was designing against, and what I would change now.
-      </p>
+      <p class="prose">Source and a running deployment on every one.</p>
     </header>
 
     {projects.length === 0 ? (
@@ -410,6 +424,61 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
   }
 
   /* ---------------- tenets (neumorphic) ---------------- */
+
+  /* ---------------- link to full CV ---------------- */
+
+  .more { margin-top: 2rem; }
+
+  .more a {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-family: var(--f-mono);
+    font-size: .76rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    padding-bottom: .25rem;
+    transition: border-color .25s;
+  }
+
+  .more a:hover { border-bottom-color: var(--accent); }
+  .more span { transition: transform .3s cubic-bezier(.22,.68,.28,1); }
+  .more a:hover span { transform: translateX(4px); }
+
+  /* ---------------- credentials strip (unused, kept for reference) ---------------- */
+
+  .creds {
+    display: grid;
+    gap: 1.5rem 2.5rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+  }
+
+  @media (min-width: 56rem) {
+    .creds { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  .cred .mono-label { margin-bottom: .7rem; }
+
+  .cred ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .45rem;
+    font-size: .9rem;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+
+  .cred b {
+    display: block;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
 
   .tenets {
     display: grid;

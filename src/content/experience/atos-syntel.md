@@ -1,0 +1,56 @@
+---
+company: "Atos Syntel"
+role: "Senior Consultant — AI Engineering"
+period: "Aug 2022 — Present"
+order: 10
+current: true
+location: "India"
+summary: "Two Gen AI platforms for enterprise quality engineering, shipped into customer environments — including air-gapped ones where a hosted model API was never an option."
+owned:
+  - label: "On-prem model deployment"
+    detail: "Qwen, Llama and Gemma on customer-secured VMs, fine-tuned with LoRA and QLoRA to fit their hardware."
+  - label: "Multi-agent architecture"
+    detail: "LangGraph, round-robin and role-based patterns, per-agent memory with state in Redis and vector stores."
+  - label: "Backend and APIs"
+    detail: "Django for orchestration, FastAPI and Flask for the model-facing layer."
+  - label: "Enterprise integration"
+    detail: "JIRA, ALM, Rally and Azure Boards for requirement sync and defect traceability."
+  - label: "Deployment"
+    detail: "Containerised and shipped across customer environments that resembled each other very little."
+impact:
+  - metric: "70%"
+    label: "less manual test design effort"
+  - metric: "80%"
+    label: "of validation tasks automated"
+  - metric: "8"
+    label: "agents in production"
+platforms:
+  - name: "QE Assist"
+    description: "Gen AI platform automating test case creation, requirement analysis, test data mining and defect traceability."
+    highlights:
+      - label: "Multi-provider model layer"
+        detail: "Azure OpenAI, AWS Bedrock, GCP Gemini or self-hosted Llama — selected per customer, because not every environment permits an outbound call."
+      - label: "Test data mining"
+        detail: "Structured extraction from documents, logs and APIs, with synthetic generation where real data was missing."
+      - label: "Prompt engineering"
+        detail: "Domain-specific prompting and low-code automation for QA teams who do not write Python."
+  - name: "QE Agents"
+    description: "Multi-agent framework where independent agents collaborate on QA and DevOps workflows."
+    highlights:
+      - label: "Test case generation"
+        detail: "From PRDs, user stories and JIRA tickets, covering UI, API, SAP and Salesforce flows."
+      - label: "Ambiguity detection"
+        detail: "Flags missing, unclear or conflicting requirements before they reach test planning."
+      - label: "Code and PR review"
+        detail: "Reads Git repositories for vulnerabilities and bad patterns, proposing diff-based fixes."
+      - label: "Defect validation"
+        detail: "Checks reproduction steps and logs against system behaviour, cutting invalid submissions."
+stack:
+  - "Python"
+  - "LangGraph"
+  - "Django"
+  - "FastAPI"
+  - "Docker"
+  - "LoRA / QLoRA"
+  - "Azure · AWS"
+---

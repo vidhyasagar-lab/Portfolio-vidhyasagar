@@ -1,0 +1,373 @@
+---
+import Base from '../layouts/Base.astro';
+import Experience from '../components/Experience.astro';
+import { site, cv, summary, skills, certifications, recognition, education } from '../site';
+
+const sections = [
+  { id: 'summary', label: 'Summary' },
+  { id: 'roles', label: 'Experience' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'certs', label: 'Certifications' },
+  { id: 'education', label: 'Education' },
+];
+---
+
+<Base
+  title={`Experience — ${site.fullName}`}
+  description={`${site.role} · ${summary.slice(0, 120)}`}
+>
+  <div class="read-progress" aria-hidden="true"></div>
+
+  {/* ---------- masthead: name, title, contact. The seven-second block. ---------- */}
+  <header class="top">
+    <div class="mesh" aria-hidden="true"></div>
+    <div class="shell top-in">
+      <p class="mono-label rise" style="animation-delay:.05s">Curriculum vitae</p>
+      <h1 class="rise" style="animation-delay:.12s">{site.fullName}</h1>
+      <p class="title rise" style="animation-delay:.2s">
+        {site.role} <span class="sep">/</span> {site.location}
+      </p>
+
+      <div class="acts rise" style="animation-delay:.28s">
+        <a class="btn-primary" href={cv} download>Download CV</a>
+        <a class="btn-ghost" href={`mailto:${site.email}`}>{site.email}</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell layout">
+    {/* ---------- sticky index: recruiters scan down the left edge ---------- */}
+    <nav class="index" aria-label="Sections">
+      <ol>
+        {sections.map((s) => (
+          <li><a href={`#${s.id}`} class="mono">{s.label}</a></li>
+        ))}
+      </ol>
+      <a class="back mono" href="/">← Portfolio</a>
+    </nav>
+
+    <div class="doc">
+      <section id="summary" class="sec reveal">
+        <h2>Summary</h2>
+        <p class="lede">{summary}</p>
+      </section>
+
+      <section id="roles" class="sec reveal">
+        <h2>Experience</h2>
+        <Experience />
+      </section>
+
+      <section id="skills" class="sec reveal">
+        <h2>Technical skills</h2>
+        <dl class="skills">
+          {skills.map((s) => (
+            <div class="srow">
+              <dt class="mono">{s.group}</dt>
+              <dd>
+                <ul>
+                  {s.items.map((i) => <li>{i}</li>)}
+                </ul>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section id="certs" class="sec reveal">
+        <h2>Certifications</h2>
+        <dl class="skills">
+          {certifications.map((c) => (
+            <div class="srow">
+              <dt class="mono">{c.body}</dt>
+              <dd>
+                <ul>
+                  {c.items.map((i) => <li class="cert">{i}</li>)}
+                </ul>
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        <h3 class="mini">Recognition</h3>
+        <ul class="plain">
+          {recognition.map((r) => <li>{r}</li>)}
+        </ul>
+      </section>
+
+      <section id="education" class="sec reveal">
+        <h2>Education</h2>
+        <ul class="edu">
+          {education.map((e) => (
+            <li>
+              <b>{e.award}</b>
+              <span>{e.place}</span>
+              <span class="mono grade">{e.detail}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="sec end reveal">
+        <a class="btn-primary" href={`mailto:${site.email}`}>Get in touch</a>
+        <a class="btn-ghost" href="/#work">See the projects</a>
+      </section>
+    </div>
+  </div>
+</Base>
+
+<style>
+  /* ---------- masthead ---------- */
+
+  .top {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-block: clamp(3.5rem, 11vh, 6rem) clamp(2.5rem, 6vh, 3.5rem);
+  }
+
+  .top-in { position: relative; z-index: 1; display: grid; gap: .85rem; justify-items: start; }
+
+  h1 {
+    font-size: clamp(2.6rem, 7.5vw, 4.6rem);
+    letter-spacing: -.045em;
+  }
+
+  .title {
+    font-family: var(--f-mono);
+    font-size: .78rem;
+    font-weight: 500;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .title .sep { color: var(--line-strong); margin-inline: .35rem; }
+
+  .acts { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: .5rem; }
+
+  .btn-primary, .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    padding: .72rem 1.35rem;
+    border-radius: 999px;
+    font-family: var(--f-mono);
+    font-size: .76rem;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    transition: transform .25s, border-color .25s, color .25s;
+  }
+
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-ghost { border-color: var(--line-strong); color: var(--ink-2); text-transform: none; letter-spacing: .04em; }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-ghost:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--accent); }
+
+  /* ---------- layout ---------- */
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding-bottom: 4rem;
+  }
+
+  @media (min-width: 64rem) {
+    .layout { grid-template-columns: 11rem minmax(0, 1fr); gap: 4rem; }
+  }
+
+  /* Floating index so you never scroll back up to navigate. */
+  .index { display: none; }
+
+  @media (min-width: 64rem) {
+    .index {
+      display: block;
+      position: sticky;
+      top: 6rem;
+      align-self: start;
+    }
+  }
+
+  .index ol {
+    list-style: none;
+    margin: 0 0 1.5rem;
+    padding: 0;
+    display: grid;
+    gap: .1rem;
+    counter-reset: s;
+  }
+
+  .index a {
+    display: block;
+    padding: .4rem 0 .4rem .9rem;
+    border-left: 1px solid var(--line);
+    font-size: .72rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    transition: color .2s, border-color .2s;
+  }
+
+  .index a:hover {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+
+  .back {
+    font-size: .7rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .back:hover { color: var(--accent); }
+
+  /* ---------- document ---------- */
+
+  .doc { display: grid; gap: 0; }
+
+  .sec {
+    padding-block: clamp(2rem, 5vh, 3rem);
+    border-top: 1px solid var(--line);
+    scroll-margin-top: 6rem;
+  }
+
+  .doc > .sec:first-child { border-top: 0; padding-top: 0; }
+
+  h2 {
+    font-size: clamp(.78rem, 1.4vw, .82rem);
+    font-family: var(--f-mono);
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 1.5rem;
+  }
+
+  .lede {
+    max-width: 62ch;
+    font-size: clamp(1.05rem, 1.9vw, 1.22rem);
+    line-height: 1.62;
+    color: var(--ink-2);
+  }
+
+  /* ---------- skills / certs table ---------- */
+
+  .skills { margin: 0; display: grid; gap: .1rem; }
+
+  .srow {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .35rem;
+    padding: .85rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  @media (min-width: 46rem) {
+    .srow { grid-template-columns: 11rem minmax(0, 1fr); gap: 1.5rem; align-items: baseline; }
+  }
+
+  .srow dt {
+    font-size: .7rem;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .srow dd { margin: 0; }
+
+  .srow ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem .35rem;
+  }
+
+  .srow li {
+    font-size: .82rem;
+    line-height: 1.4;
+    padding: .22rem .6rem;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+  }
+
+  .srow li.cert {
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+    color: var(--ink);
+  }
+
+  .mini {
+    font-family: var(--f-mono);
+    font-size: .7rem;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 1.75rem 0 .75rem;
+  }
+
+  .plain {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+  }
+
+  .plain li {
+    font-size: .84rem;
+    padding: .28rem .7rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+  }
+
+  /* ---------- education ---------- */
+
+  .edu { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
+
+  .edu li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .15rem 1rem;
+    padding: .9rem 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+
+  .edu b {
+    grid-column: 1;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+
+  .edu span:not(.grade) {
+    grid-column: 1;
+    font-size: .88rem;
+    color: var(--ink-3);
+  }
+
+  .grade {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    font-size: .8rem;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- end ---------- */
+
+  .end {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .7rem;
+  }
+</style>
