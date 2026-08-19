@@ -51,12 +51,12 @@
   --mesh-alpha: .16;
 
   /* --- ambient page field --- */
-  --au-1: #9DBAC0;   /* pale slate-teal */
-  --au-2: #B6C4CC;   /* cool grey-blue */
-  --au-3: #A8B6C6;   /* soft steel */
-  --au-alpha: .30;
-  --grain-alpha: .04;
-  --vignette: rgba(120, 132, 140, .30);
+  --au-1: #7FB4BC;   /* teal, brightest */
+  --au-2: #93AFCB;   /* mid blue */
+  --au-3: #9C9FC4;   /* soft indigo, deepest */
+  --au-alpha: .46;
+  --grain-alpha: .05;
+  --vignette: rgba(110, 124, 136, .20);
 
   /* --- type --- */
   --f-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
@@ -105,12 +105,12 @@
     --mesh-3: #1B2F4D;
     --mesh-alpha: .20;
 
-    --au-1: #16565C;
-    --au-2: #123B52;
-    --au-3: #1B2F4D;
-    --au-alpha: .28;
-    --grain-alpha: .055;
-    --vignette: rgba(0, 0, 0, .72);
+    --au-1: #1C8288;
+    --au-2: #16537A;
+    --au-3: #262F70;
+    --au-alpha: .52;
+    --grain-alpha: .06;
+    --vignette: rgba(0, 0, 0, .52);
   }
 }
 
@@ -149,12 +149,12 @@
   --mesh-3: #1B2F4D;
   --mesh-alpha: .20;
 
-  --au-1: #16565C;
-  --au-2: #123B52;
-  --au-3: #1B2F4D;
-  --au-alpha: .28;
-  --grain-alpha: .055;
-  --vignette: rgba(0, 0, 0, .72);
+  --au-1: #1C8288;
+  --au-2: #16537A;
+  --au-3: #262F70;
+  --au-alpha: .52;
+  --grain-alpha: .06;
+  --vignette: rgba(0, 0, 0, .52);
 }
 
 /* expose tokens to Tailwind v4 utilities */
@@ -364,6 +364,18 @@ img { max-width: 100%; height: auto; display: block; }
   animation: drift-c 50s ease-in-out infinite alternate;
 }
 
+/* Fourth mass, tighter and brighter — gives the field a focal point instead
+   of three evenly-spread washes. Different period again so nothing syncs. */
+.ambient .b4 {
+  width: 30vw; height: 30vw;
+  min-width: 240px; min-height: 240px;
+  top: 42vh; left: 34vw;
+  background: var(--au-1);
+  filter: blur(70px);
+  opacity: .8;
+  animation: drift-d 38s ease-in-out infinite alternate;
+}
+
 /* Vignette. The single highest-impact move on a dark ground: darken the edges
    so the centre holds attention instead of the field competing edge to edge.
    Sits above the aurora, below the grain. */
@@ -401,6 +413,11 @@ img { max-width: 100%; height: auto; display: block; }
 @keyframes drift-c {
   from { transform: translate3d(0, 0, 0) scale(1); }
   to   { transform: translate3d(8vw, -7vh, 0) scale(1.18); }
+}
+
+@keyframes drift-d {
+  from { transform: translate3d(0, 0, 0) scale(.9); }
+  to   { transform: translate3d(-9vw, 6vh, 0) scale(1.25); }
 }
 
 /* Layer order: aurora (0) -> pinned WebGL field (1) -> content (2) -> nav (50).
