@@ -12,8 +12,16 @@ export async function getStaticPaths() {
 }
 
 const { project } = Astro.props;
-const { Content } = await render(project);
+const { Content, headings } = await render(project);
 const d = project.data;
+
+// Reading time from the raw MDX source. 225 wpm is the usual prose average;
+// this runs slightly long if anything, since code and tables read slower.
+const words = (project.body ?? '').split(/\s+/).filter(Boolean).length;
+const readMin = Math.max(1, Math.round(words / 225));
+
+// h2 only. Indexing h3s would make the rail taller than the sections it points at.
+const sections = headings.filter((h) => h.depth === 2);
 ---
 
 <Base title={`${d.title} — ${site.name}`} description={d.tagline}>
@@ -21,7 +29,7 @@ const d = project.data;
   <div class="read-progress" aria-hidden="true"></div>
 
   <article>
-    {/* --------- header --------- */}
+    {/* --------- masthead --------- */}
     <header class="head">
       <div class="mesh" aria-hidden="true"></div>
 
@@ -30,9 +38,12 @@ const d = project.data;
           <span aria-hidden="true">←</span> All work
         </a>
 
-        <p class="mono-label rise" style="animation-delay:.05s">{d.period} · {d.role}</p>
+        <p class="mono-label rise" style="animation-delay:.05s">
+          {d.period} <span class="dot" aria-hidden="true">·</span> {readMin} min read
+        </p>
         <h1 style={`view-transition-name: t-${project.id}`}>{d.title}</h1>
         <p class="tagline rise" style="animation-delay:.2s">{d.tagline}</p>
+        <p class="byline rise" style="animation-delay:.24s">{d.role}</p>
 
         <div class="actions rise" style="animation-delay:.28s">
           {d.live && (
@@ -52,85 +63,100 @@ const d = project.data;
       </div>
     </header>
 
-    {/* --------- hero screenshot --------- */}
-    {d.cover && (
-      <section class="shell cover-wrap">
-        <figure class="cover reveal">
-          {/* Eager + high priority: this is the LCP element, so lazy-loading it
-              would delay the very metric it dominates. The opposite of .shot,
-              which is below the fold and correctly lazy. */}
-          <img
-            src={d.cover.src}
-            alt={d.cover.alt}
-            width={d.cover.width}
-            height={d.cover.height}
-            loading="eager"
-            fetchpriority="high"
-            decoding="async"
-          />
-        </figure>
-      </section>
-    )}
-
-    {/* --------- at a glance --------- */}
-    <section class="shell glance-wrap">
-      <div data-tilt class="glance glass reveal">
-        <div class="glance-col">
-          <p class="mono-label">The hard part</p>
-          <p class="problem">{d.problem}</p>
-        </div>
+    <div class="shell layout">
+      {/* --------- sticky rail: contents + the facts that were in the glance card --------- */}
+      <aside class="rail">
+        {sections.length > 0 && (
+          <nav class="toc" aria-label="Contents">
+            <p class="mono-label rail-h">Contents</p>
+            <ol>
+              {sections.map((h) => (
+                <li><a href={`#${h.slug}`}>{h.text}</a></li>
+              ))}
+            </ol>
+          </nav>
+        )}
 
         {d.outcomes.length > 0 && (
-          <dl class="metrics">
-            {d.outcomes.map((o) => (
-              <div>
-                <dt>{o.metric}</dt>
-                <dd class="glass-dim">{o.label}</dd>
-              </div>
-            ))}
-          </dl>
+          <div class="facts">
+            <p class="mono-label rail-h">Key figures</p>
+            <dl class="metrics">
+              {d.outcomes.map((o) => (
+                <div>
+                  <dt>{o.metric}</dt>
+                  <dd>{o.label}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         )}
-      </div>
 
-      <ul class="stack reveal">
-        {d.stack.map((s) => <li class="mono-chip">{s}</li>)}
-      </ul>
-    </section>
+        <div class="facts">
+          <p class="mono-label rail-h">Built with</p>
+          <ul class="stack">
+            {d.stack.map((s) => <li class="mono-chip">{s}</li>)}
+          </ul>
+        </div>
+      </aside>
 
-    {/* --------- body --------- */}
-    <div class="shell body reveal">
-      <div class="prose">
-        <Content />
+      {/* --------- the article itself --------- */}
+      <div class="doc">
+        {d.cover && (
+          <figure class="cover reveal">
+            {/* Eager + high priority: this is the LCP element, so lazy-loading it
+                would delay the very metric it dominates. The opposite of .shot,
+                which is below the fold and correctly lazy. */}
+            <img
+              src={d.cover.src}
+              alt={d.cover.alt}
+              width={d.cover.width}
+              height={d.cover.height}
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
+            />
+          </figure>
+        )}
+
+        {/* The standfirst. Stating the hard part before the prose gives the
+            reader the stakes up front, which is what the glance card did. */}
+        <p class="lede reveal">{d.problem}</p>
+
+        <div class="body reveal">
+          <div class="prose">
+            <Content />
+          </div>
+        </div>
+
+        {d.shots.length > 0 && (
+          <section class="shots">
+            <p class="mono-label reveal">Screens</p>
+            {d.shots.map((shot, i) => (
+              <figure class="shot reveal" style={`transition-delay:${i * 80}ms`}>
+                <img src={shot.src} alt={shot.caption} loading="lazy" decoding="async" />
+                <figcaption class="mono-label">{shot.caption}</figcaption>
+              </figure>
+            ))}
+          </section>
+        )}
+
+        <section class="next reveal">
+          <a href="/#work" class="btn-ghost">← Back to all work</a>
+          <a href={`mailto:${site.email}`} class="btn-primary">Ask me about this project</a>
+        </section>
       </div>
     </div>
-
-    {/* --------- screenshots --------- */}
-    {d.shots.length > 0 && (
-      <section class="shell shots">
-        <p class="mono-label reveal">Screens</p>
-        {d.shots.map((shot, i) => (
-          <figure class="shot reveal" style={`transition-delay:${i * 80}ms`}>
-            <img src={shot.src} alt={shot.caption} loading="lazy" decoding="async" />
-            <figcaption class="mono-label">{shot.caption}</figcaption>
-          </figure>
-        ))}
-      </section>
-    )}
-
-    {/* --------- next --------- */}
-    <section class="shell next reveal">
-      <a href="/#work" class="btn-ghost">← Back to all work</a>
-      <a href={`mailto:${site.email}`} class="btn-primary">Ask me about this project</a>
-    </section>
   </article>
 </Base>
 
 <style>
+  /* --------- masthead --------- */
+
   .head {
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    padding-block: clamp(3rem, 9vh, 5.5rem) clamp(2.5rem, 7vh, 4rem);
+    padding-block: clamp(3rem, 9vh, 5.5rem) clamp(2rem, 5vh, 3rem);
   }
 
   .head-inner {
@@ -149,6 +175,8 @@ const d = project.data;
 
   .back:hover { color: var(--accent); }
 
+  .dot { color: var(--line-strong); margin-inline: .3rem; }
+
   h1 {
     font-size: clamp(2.4rem, 7vw, 4.4rem);
     letter-spacing: -.045em;
@@ -160,6 +188,13 @@ const d = project.data;
     font-size: clamp(1.02rem, 1.7vw, 1.2rem);
     line-height: 1.6;
     color: var(--ink-2);
+  }
+
+  .byline {
+    font-family: var(--f-mono);
+    font-size: .76rem;
+    letter-spacing: .04em;
+    color: var(--ink-3);
   }
 
   .actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: .4rem; }
@@ -184,46 +219,75 @@ const d = project.data;
   .btn-primary:hover { transform: translateY(-2px); }
   .btn-ghost:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--accent); }
 
-  /* --------- glance --------- */
+  /* --------- layout: rail + article ---------
+     Same shape as /experience, so the two long-form pages read as one system. */
 
-  .glance-wrap { display: grid; gap: 1.1rem; padding-bottom: 1rem; }
-
-  .glance {
+  .layout {
     display: grid;
-    gap: 1.75rem;
-    padding: 1.6rem 1.55rem;
-    border-radius: 18px;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding-bottom: 3rem;
   }
 
-  @media (min-width: 54rem) {
-    .glance { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; }
+  @media (min-width: 64rem) {
+    .layout { grid-template-columns: 14rem minmax(0, 1fr); gap: 4rem; }
   }
 
-  .glance .mono-label { color: var(--glass-ink-2); margin-bottom: .5rem; }
+  .rail { display: grid; gap: 1.75rem; align-content: start; }
 
-  .problem {
-    font-family: var(--f-display);
-    font-weight: 600;
-    font-size: clamp(1.1rem, 2.1vw, 1.4rem);
-    line-height: 1.34;
-    letter-spacing: -.025em;
-    color: var(--glass-ink);
-    max-width: 40ch;
+  @media (min-width: 64rem) {
+    .rail {
+      position: sticky;
+      top: 6rem;
+      align-self: start;
+    }
   }
 
-  .metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-    gap: 1.1rem;
+  .rail-h { color: var(--ink-3); margin-bottom: .7rem; }
+
+  /* Contents is navigation, not content: on a phone it would push the article
+     down without helping, since the whole page is one thumb-scroll anyway. */
+  .toc { display: none; }
+
+  @media (min-width: 64rem) {
+    .toc { display: block; }
+  }
+
+  .toc ol {
+    list-style: none;
     margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .1rem;
   }
 
-  .metrics div { display: grid; gap: .15rem; }
+  .toc a {
+    display: block;
+    padding: .38rem 0 .38rem .85rem;
+    border-left: 1px solid var(--line);
+    font-size: .78rem;
+    line-height: 1.35;
+    color: var(--ink-3);
+    transition: color .2s, border-color .2s;
+  }
+
+  .toc a:hover {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+
+  /* --------- rail facts --------- */
+
+  .facts { display: block; }
+
+  .metrics { display: grid; gap: .9rem; margin: 0; }
+
+  .metrics div { display: grid; gap: .1rem; }
 
   .metrics dt {
     font-family: var(--f-display);
     font-weight: 800;
-    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-size: 1.5rem;
     letter-spacing: -.04em;
     color: var(--accent);
     font-variant-numeric: tabular-nums;
@@ -231,14 +295,15 @@ const d = project.data;
 
   .metrics dd {
     margin: 0;
-    font-size: .78rem;
+    font-size: .76rem;
     line-height: 1.4;
+    color: var(--ink-3);
   }
 
   .stack {
     display: flex;
     flex-wrap: wrap;
-    gap: .4rem;
+    gap: .35rem;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -246,24 +311,52 @@ const d = project.data;
 
   .mono-chip {
     font-family: var(--f-mono);
-    font-size: .7rem;
+    font-size: .66rem;
     font-weight: 500;
-    letter-spacing: .1em;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    padding: .3rem .65rem;
+    padding: .26rem .55rem;
     border-radius: 6px;
     border: 1px solid var(--line);
     color: var(--ink-3);
   }
 
-  /* --------- body --------- */
+  /* --------- article --------- */
 
-  .body { padding-block: clamp(2.5rem, 7vh, 4rem); }
+  .doc { min-width: 0; }
+
+  .lede {
+    max-width: var(--measure);
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+    line-height: 1.42;
+    letter-spacing: -.022em;
+    color: var(--ink);
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .body { padding-block: clamp(1.75rem, 5vh, 2.5rem); }
+
+  /* The measure cap. Without it the column inherits .shell's 82rem and body
+     text runs past 150 characters a line, which is why this never read like
+     an article no matter what the type was doing. */
+  .prose { max-width: var(--measure); }
+
+  .body :global(p) {
+    margin: 0 0 1.15em;
+    font-size: 1.02rem;
+    line-height: 1.75;
+    color: var(--ink-2);
+  }
 
   .body :global(h2) {
     font-size: clamp(1.45rem, 3vw, 1.95rem);
     margin: 2.75rem 0 .9rem;
     color: var(--ink);
+    /* Clears the fixed nav when a Contents link jumps here. */
+    scroll-margin-top: 5.5rem;
   }
 
   .body :global(h2:first-child) { margin-top: 0; }
@@ -272,6 +365,7 @@ const d = project.data;
     font-size: 1.1rem;
     margin: 2rem 0 .6rem;
     color: var(--ink);
+    scroll-margin-top: 5.5rem;
   }
 
   .body :global(ul),
@@ -280,12 +374,14 @@ const d = project.data;
     padding-left: 1.25rem;
     display: grid;
     gap: .45rem;
+    color: var(--ink-2);
+    line-height: 1.7;
   }
 
   .body :global(li::marker) { color: var(--accent); }
 
   .body :global(blockquote) {
-    margin: 1.5rem 0;
+    margin: 1.75rem 0;
     padding: .25rem 0 .25rem 1.15rem;
     border-left: 3px solid var(--accent);
     color: var(--ink);
@@ -305,14 +401,17 @@ const d = project.data;
     border-radius: 4px;
   }
 
+  /* Code and tables get the full column, not the prose measure — wrapping a
+     diagram to 66ch would break it. */
   .body :global(pre) {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
     padding: 1rem 1.1rem;
     overflow-x: auto;
-    margin: 1.25rem 0;
+    margin: 1.5rem 0;
     font-size: .84rem;
+    line-height: 1.55;
   }
 
   .body :global(pre code) { background: none; border: 0; padding: 0; }
@@ -323,6 +422,7 @@ const d = project.data;
     font-family: var(--f-mono);
     font-size: .8rem;
     font-variant-numeric: tabular-nums;
+    margin: 1.5rem 0;
   }
 
   .body :global(th),
@@ -341,9 +441,7 @@ const d = project.data;
 
   /* --------- hero screenshot --------- */
 
-  .cover-wrap { padding-bottom: clamp(1.5rem, 4vh, 2.5rem); }
-
-  .cover { margin: 0; }
+  .cover { margin: 0 0 clamp(1.5rem, 4vh, 2.25rem); }
 
   .cover img {
     display: block;
