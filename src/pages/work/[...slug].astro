@@ -42,12 +42,35 @@ const d = project.data;
           )}
           {d.repo && (
             <a class="btn-ghost" href={d.repo} rel="noopener noreferrer" target="_blank">
-              View source
+              {/* Defaults to "View source". Overridden when the link is not the
+                  project's own repo — promising source and delivering a profile
+                  is a broken promise, just a quiet one. */}
+              {d.repoLabel ?? 'View source'}
             </a>
           )}
         </div>
       </div>
     </header>
+
+    {/* --------- hero screenshot --------- */}
+    {d.cover && (
+      <section class="shell cover-wrap">
+        <figure class="cover reveal">
+          {/* Eager + high priority: this is the LCP element, so lazy-loading it
+              would delay the very metric it dominates. The opposite of .shot,
+              which is below the fold and correctly lazy. */}
+          <img
+            src={d.cover.src}
+            alt={d.cover.alt}
+            width={d.cover.width}
+            height={d.cover.height}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </figure>
+      </section>
+    )}
 
     {/* --------- at a glance --------- */}
     <section class="shell glance-wrap">
@@ -314,6 +337,25 @@ const d = project.data;
     letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--ink-3);
+  }
+
+  /* --------- hero screenshot --------- */
+
+  .cover-wrap { padding-bottom: clamp(1.5rem, 4vh, 2.5rem); }
+
+  .cover { margin: 0; }
+
+  .cover img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    /* A screenshot is a rectangle of someone else's UI dropped onto the page.
+       The surface behind it and a soft lift keep it sitting on the design
+       rather than punched through it. */
+    background: var(--surface);
+    box-shadow: 0 18px 50px -28px rgba(0, 0, 0, .55);
   }
 
   /* --------- shots --------- */

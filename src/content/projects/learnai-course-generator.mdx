@@ -1,0 +1,121 @@
+---
+title: "LearnAI"
+tagline: "Turns a topic or an uploaded PDF into a full course — modules, quiz, and graded assessment — through a five-agent pipeline that checks its own work."
+role: "Sole engineer — architecture, agent pipeline, retrieval, application, security"
+period: "2026"
+stack: ["Python", "LangGraph", "LangChain", "Azure OpenAI", "FAISS", "BM25", "FastAPI", "HTMX"]
+# This project's repo is private, so the link points at the profile instead and
+# says so. A "View source" button that doesn't reach the source is a 404 with
+# better manners.
+repo: "https://github.com/vidhyasagar-lab"
+repoLabel: "GitHub profile"
+problem: "A language model will happily generate a polished course with a wrong answer key, and a document-grounded course that quietly drifts from the document it was supposed to be grounded in. Both failures look like success."
+outcomes:
+  - metric: "8"
+    label: "course formats from one pipeline"
+  - metric: "5"
+    label: "agents: plan, write, review, quiz, assess"
+  - metric: "100%"
+    label: "of quiz answers re-solved independently"
+featured: true
+order: 1
+---
+
+## The constraint
+
+The easy version of this project is a prompt: *"write me a course on X."* That works, and it is
+worthless, because you cannot tell a good result from a bad one by looking at it. Generated
+teaching material fails in two specific ways that both look like success.
+
+The first is the **answer key**. A model asked to write ten multiple-choice questions will produce
+ten plausible questions and mark one option correct for each. Some of those marks are wrong. The
+question reads well, the explanation reads well, and a learner who answers correctly is told they
+are wrong. Nothing about the output signals which of the ten are broken.
+
+The second is **grounding drift**. When the course is built from a user's uploaded document, the
+model has both the retrieved passages and its own pretrained knowledge available, and it blends
+them. The result is fluent, mostly right, and contains claims the source document never made —
+the exact failure a document-grounded tool exists to prevent.
+
+Both failures share a shape: the generator is not a reliable judge of its own output. So the
+system had to be built around not trusting it.
+
+## What I built
+
+A five-node LangGraph state machine. Each node owns one job, catches its own exceptions, and
+returns usable fallback content while appending to `state.errors`, so one bad module never takes
+down the course.
+
+```
+START → Planner → Writers → Reviewer ─┬→ Quiz Validator ──→ END
+                                       └→ Assessment Validator ─┘
+```
+
+- **Planner** — a ReAct loop with tools. It calls `search_document` when a file was uploaded, or
+  `research_subtopics` for a topic-only course, and decides the module count itself rather than
+  taking it as a parameter.
+- **Writers** — every module written concurrently through `asyncio.gather`, each with a
+  format-specific prompt and its own Pydantic output schema, with RAG context injected per module.
+- **Reviewer** — scores each module out of ten, rewrites anything below seven, and for
+  document-based courses runs a separate faithfulness check against the source, rewriting again
+  if the module is judged unfaithful.
+- **Two validators**, fanned out in parallel — the subject of the next section.
+
+Retrieval is hybrid: FAISS for semantic similarity and BM25 for keyword matching, queried
+independently and merged with Reciprocal Rank Fusion at the standard `k=60`, over-fetching three
+times the requested depth before fusing. Chunks break at heading boundaries so unrelated sections
+never merge, and each chunk is given an LLM-written context line before embedding — Anthropic's
+Contextual Retrieval technique, which they report cuts retrieval failures by around 49%.
+
+## The decision I'd defend
+
+**The quiz agent does not trust its own answer key.**
+
+After generating the questions, each one is handed to a separate LLM call that solves it from
+scratch — **without seeing the claimed correct answer**. When the two disagree, `correct_index` is
+overwritten with the independently-derived answer and the correction is logged.
+
+The alternatives I weighed:
+
+- **Trust the generator.** Free, and it ships the bug described above. A learner discovering a
+  wrong answer key stops trusting everything else on the page.
+- **Ask the model to double-check its own answer.** Nearly free, and nearly useless — shown its
+  own prior answer, a model overwhelmingly agrees with it. Anchoring makes the check theatre.
+- **Human review.** Correct and unavailable; the whole point is generating courses on demand.
+
+Hiding the claimed answer is the part that does the work. It converts self-review, where the model
+is biased toward its own output, into an independent second solve where the two results can
+genuinely disagree. The same pattern runs over assessment MCQs.
+
+> The limit is honest: short-answer questions can't be cross-checked this way, so they aren't.
+> They're graded at submit time by a model comparing the learner's answer to the expected one.
+
+## How I know it works — and where that stops
+
+The verification is structural rather than statistical, and I'd rather say so than dress it up.
+Because every correction is logged, answer-key disagreements are observable at runtime instead of
+being discovered by a learner. The same holds for the faithfulness check: an unfaithful module is
+rewritten and recorded, not silently shipped.
+
+What I do **not** have is a test suite. There are no automated tests in this repository, so I can
+quote the mechanism but not a measured defect rate — and quoting a number I hadn't measured would
+be exactly the failure this project is built to avoid.
+
+There's a real gap I'd fix first, too. The reviewer parses a `SCORE: X` line out of the evaluation
+response; if the model returns text without that line, the module is assumed to score ten and
+passes review untouched. A parse failure currently reads as a perfect score, which is precisely
+the wrong direction to fail in.
+
+## What I'd change
+
+**Move the in-process state out.** The document cache, the FAISS indexes, and the rate limiter all
+live in process memory, which pins the app to a single worker — with more than one, uploads and
+login lockouts land inconsistently depending on which worker answers. Redis first, then scale.
+
+**Cost scales with document size in a way I'd want to bound.** Contextual Retrieval issues one LLM
+call per chunk before generation even begins, so a hundred-chunk document is a hundred calls of
+latency and spend up front. Batching them, or contextualizing lazily for chunks that actually get
+retrieved, would cut most of that.
+
+**Fail the score parse closed, not open.** A missing `SCORE:` line should route to a rewrite or a
+retry, never to an implicit ten out of ten.

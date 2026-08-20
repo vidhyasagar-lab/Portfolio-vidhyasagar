@@ -85,6 +85,7 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
             period={p.data.period}
             stack={p.data.stack}
             repo={p.data.repo}
+            repoLabel={p.data.repoLabel}
             live={p.data.live}
             outcomes={p.data.outcomes}
             index={i}

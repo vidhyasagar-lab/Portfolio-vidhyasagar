@@ -17,6 +17,10 @@ const projects = defineCollection({
     /** Ordered most-relevant first; rendered as chips. */
     stack: z.array(z.string()),
     repo: z.string().url().optional(),
+    /** Link text for epo. Defaults to "View source"; override when the URL
+        is not this project's own repository (e.g. a private repo, so the link
+        points at the profile instead). */
+    repoLabel: z.string().optional(),
     live: z.string().url().optional(),
     /** The hardest problem, in one sentence. Drives the card hover. */
     problem: z.string(),
@@ -25,7 +29,21 @@ const projects = defineCollection({
       metric: z.string(),
       label: z.string(),
     })).default([]),
-    cover: z.string().optional(),
+    /**
+     * Hero screenshot, rendered above the fold on the case study page. `alt` is
+     * required rather than optional: this is the largest element on the page and
+     * for a project with no public repo and no live demo, it carries the evidence.
+     *
+     * `width`/`height` are the image's intrinsic pixel size. They reserve the
+     * box before the file loads, so the hero cannot push the page down as it
+     * arrives — that shift is measured as CLS by Speed Insights.
+     */
+    cover: z.object({
+      src: z.string(),
+      alt: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+    }).optional(),
     shots: z.array(z.object({
       src: z.string(),
       caption: z.string(),
