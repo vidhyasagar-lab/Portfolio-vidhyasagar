@@ -13,32 +13,67 @@ problem: "Generating a course takes one prompt. Generating one a learner can tru
 # Deliberately no `cover`: the article carries no inline image. Every screen
 # lives in the "See screens" gallery in the masthead instead.
 #
-# These are PLACEHOLDER wireframes. When the real captures land, replace each
-# `src` and set `width`/`height` to that file's real pixels — the dimensions are
-# what stop the layout shifting as an image loads, so a stale pair is worse than
-# none. The prose is written and checked; keep it.
+# Ordered as a user meets them, not by when they were captured: input, then
+# what the system understood, then the generated course, then the three ways it
+# is assessed. width/height are each file's real pixels — they reserve the box
+# so nothing reflows as it loads.
 shots:
-  - src: "/shots/learnai-dashboard.svg"
-    alt: "PLACEHOLDER — dashboard showing the eight course-format options and the document upload area"
-    caption: "The dashboard, where a course starts."
-    title: "Where a course starts"
-    description: "Two inputs and eight outputs. Name a topic and the planner researches it and designs the curriculum itself; upload a PDF, DOCX, TXT or Markdown file up to 20 MB and the course is built from that document instead, with its page and section citations carried through. The format chosen here decides which of the eight prompt-and-schema pairs the writers run — the same scaffolding renders as a standard course, a podcast script, an interview, flashcards or a tutorial."
-    width: 1600
-    height: 1000
-  - src: "/shots/learnai-course.svg"
-    alt: "PLACEHOLDER — a generated course: module list on the left, content pane on the right"
-    caption: "The generated course view."
-    title: "A generated course"
-    description: "The module list on the left is what the planner decided the course needed — the count is chosen per topic rather than fixed. Each module in the content pane was written by its own concurrent call, then scored out of ten by the reviewer and rewritten if it fell below seven. For document-based courses the [Page N] citations carried through from extraction appear in the body text."
-    width: 1600
-    height: 900
-  - src: "/shots/learnai-quiz.svg"
-    alt: "PLACEHOLDER — a quiz question with its four options and the explanation shown after answering"
-    caption: "A quiz question with its explanation."
-    title: "A quiz question, after answering"
-    description: "Every question on this screen was solved twice: once by the model that wrote it, and once by a separate call that never saw the claimed answer. Where the two disagreed the independent solve won, and the correction was logged. The explanation is generated alongside the question, so it has to survive the same check — an explanation defending a wrong key is worse than no explanation at all."
-    width: 1600
-    height: 900
+  - src: "/shots/learnai/01-generate.png"
+    alt: "LearnAI landing page with a topic typed in, a DOCX attached, and eight output formats below"
+    caption: "The generator, with a topic and a document."
+    title: "One input, eight outputs"
+    description: "A topic, a document, or both. The row underneath picks the format — course, chat, podcast, interview, notes, flashcards, case study or tutorial — and that choice selects which prompt and output schema the writers run against the same course scaffolding."
+    width: 1345
+    height: 630
+  - src: "/shots/learnai/02-document-analysis.png"
+    alt: "Analysis panel for an uploaded DOCX showing word, chunk and table counts, a summary, key topics and suggested courses"
+    caption: "What the system found in the upload."
+    title: "The document, read back"
+    description: "Before anything is generated the upload is parsed and shown back: 4,514 words, 68 chunks, 30 tables recovered as Markdown. The key topics and suggested courses come from that pass, so the curriculum is proposed from the document rather than from the filename."
+    width: 1341
+    height: 642
+  - src: "/shots/learnai/03-course-library.png"
+    alt: "Course library showing two generated courses, each tagged with its source document and lesson count"
+    caption: "Generated courses, each tied to its source."
+    title: "Courses, and where they came from"
+    description: "Each card keeps the document it was built from. The module count is not fixed — the planner decides how many a subject needs, which is why one course here runs to 15 lessons and the other to 26."
+    width: 1359
+    height: 637
+  - src: "/shots/learnai/04-course-overview.png"
+    alt: "Course overview page listing 15 modules with quiz, exam and flashcard entry points"
+    caption: "A generated course, before you start."
+    title: "The shape of a course"
+    description: "Fifteen modules, a ten-question quiz, a fifteen-question exam and a flashcard deck, all produced in the same run. The module titles are the planner's, written before any module body existed."
+    width: 1356
+    height: 639
+  - src: "/shots/learnai/05-module.png"
+    alt: "A module open in the reader, showing generated prose with inline source citations"
+    caption: "A module, with its citations."
+    title: "Reading a module"
+    description: "Each module was written by its own concurrent call, then scored out of ten by the reviewer and rewritten if it fell below seven. The bracketed source references are carried through from extraction, so a claim can be traced back to the section it came from."
+    width: 1351
+    height: 625
+  - src: "/shots/learnai/06-quiz.png"
+    alt: "Quiz page showing a multiple-choice question with four options"
+    caption: "The ten-question quiz."
+    title: "Every answer solved twice"
+    description: "The model that writes a question also writes its key, and some of those keys are wrong. Each question here was re-solved by a separate call that never saw the claimed answer; where the two disagreed, the independent solve won."
+    width: 1351
+    height: 634
+  - src: "/shots/learnai/07-assessment.png"
+    alt: "Timed assessment with a countdown clock, showing question one of fifteen"
+    caption: "The timed assessment."
+    title: "The longer paper, under a clock"
+    description: "Fifteen questions in sixty minutes, mixing multiple choice with short answer. The same cross-check runs across the multiple-choice questions; short answers cannot be verified that way, so they are graded at submission against an expected response."
+    width: 1354
+    height: 640
+  - src: "/shots/learnai/08-flashcards.png"
+    alt: "Flashcard game showing card one of six, front side, with a progress bar"
+    caption: "The flashcard deck."
+    title: "The same course, recalled"
+    description: "Six cards drawn from the same generated material, click to flip. Flashcards are also one of the eight output formats, so a whole course can be produced in this shape rather than added on at the end."
+    width: 1354
+    height: 637
 outcomes:
   - metric: "8"
     label: "course formats from one pipeline"
