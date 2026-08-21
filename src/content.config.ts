@@ -43,10 +43,28 @@ const projects = defineCollection({
       alt: z.string(),
       width: z.number().optional(),
       height: z.number().optional(),
+      /** One line under the image. */
+      caption: z.string().optional(),
+      /** Heading and body for the lightbox. Without them it is a plain zoom. */
+      title: z.string().optional(),
+      description: z.string().optional(),
     }).optional(),
+    /**
+     * The Screens section, below the writing. Every entry expands into the same
+     * lightbox as the cover, so `title`/`description` are where the detail goes
+     * that would bloat the caption.
+     *
+     * `width`/`height` are optional only so an entry can be added quickly, but
+     * leaving them out means that image reflows the page as it loads.
+     */
     shots: z.array(z.object({
       src: z.string(),
+      alt: z.string().optional(),
       caption: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+      title: z.string().optional(),
+      description: z.string().optional(),
     })).default([]),
     featured: z.boolean().default(false),
     order: z.number().default(99),

@@ -124,6 +124,12 @@ const {
       if (reduced) {
         targets.forEach((el) => el.classList.add('is-in'));
       } else {
+        // threshold MUST stay 0. A ratio threshold is a fraction of the
+        // element's own area, so an element taller than the viewport can never
+        // reach it: a 9000px article in an 800px window caps out around 0.09
+        // and would stay at opacity 0 forever. The negative bottom rootMargin
+        // already supplies the "wait until it is properly on screen" delay,
+        // and it does so in pixels, which does not care how tall the target is.
         const io = new IntersectionObserver(
           (entries) => {
             entries.forEach((entry) => {
@@ -133,7 +139,7 @@ const {
               }
             });
           },
-          { rootMargin: '0px 0px -12% 0px', threshold: 0.1 }
+          { rootMargin: '0px 0px -12% 0px', threshold: 0 }
         );
         targets.forEach((el) => io.observe(el));
       }

@@ -10,6 +10,35 @@ stack: ["Python", "LangGraph", "LangChain", "Azure OpenAI", "FAISS", "BM25", "Fa
 repo: "https://github.com/vidhyasagar-lab"
 repoLabel: "GitHub profile"
 problem: "Generating a course takes one prompt. Generating one a learner can trust — a correct answer key, content that stays faithful to the source document — is the engineering problem."
+# Deliberately no `cover`: the article carries no inline image. Every screen
+# lives in the "See screens" gallery in the masthead instead.
+#
+# These are PLACEHOLDER wireframes. When the real captures land, replace each
+# `src` and set `width`/`height` to that file's real pixels — the dimensions are
+# what stop the layout shifting as an image loads, so a stale pair is worse than
+# none. The prose is written and checked; keep it.
+shots:
+  - src: "/shots/learnai-dashboard.svg"
+    alt: "PLACEHOLDER — dashboard showing the eight course-format options and the document upload area"
+    caption: "The dashboard, where a course starts."
+    title: "Where a course starts"
+    description: "Two inputs and eight outputs. Name a topic and the planner researches it and designs the curriculum itself; upload a PDF, DOCX, TXT or Markdown file up to 20 MB and the course is built from that document instead, with its page and section citations carried through. The format chosen here decides which of the eight prompt-and-schema pairs the writers run — the same scaffolding renders as a standard course, a podcast script, an interview, flashcards or a tutorial."
+    width: 1600
+    height: 1000
+  - src: "/shots/learnai-course.svg"
+    alt: "PLACEHOLDER — a generated course: module list on the left, content pane on the right"
+    caption: "The generated course view."
+    title: "A generated course"
+    description: "The module list on the left is what the planner decided the course needed — the count is chosen per topic rather than fixed. Each module in the content pane was written by its own concurrent call, then scored out of ten by the reviewer and rewritten if it fell below seven. For document-based courses the [Page N] citations carried through from extraction appear in the body text."
+    width: 1600
+    height: 900
+  - src: "/shots/learnai-quiz.svg"
+    alt: "PLACEHOLDER — a quiz question with its four options and the explanation shown after answering"
+    caption: "A quiz question with its explanation."
+    title: "A quiz question, after answering"
+    description: "Every question on this screen was solved twice: once by the model that wrote it, and once by a separate call that never saw the claimed answer. Where the two disagreed the independent solve won, and the correction was logged. The explanation is generated alongside the question, so it has to survive the same check — an explanation defending a wrong key is worse than no explanation at all."
+    width: 1600
+    height: 900
 outcomes:
   - metric: "8"
     label: "course formats from one pipeline"

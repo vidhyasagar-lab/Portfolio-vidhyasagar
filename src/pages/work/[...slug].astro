@@ -1,6 +1,8 @@
 ---
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import Figure from '../../components/Figure.astro';
+import ScreenGallery from '../../components/ScreenGallery.astro';
 import { site } from '../../site';
 
 export async function getStaticPaths() {
@@ -22,6 +24,25 @@ const readMin = Math.max(1, Math.round(words / 225));
 
 // h2 only. Indexing h3s would make the rail taller than the sections it points at.
 const sections = headings.filter((h) => h.depth === 2);
+
+// The gallery opens on the cover, because the cover is screen one — it is the
+// image already on the page, so opening on anything else would be a jump cut.
+// `shots` supplies the rest.
+const galleryId = `screens-${project.id}`;
+const screens = [
+  ...(d.cover
+    ? [{
+        src: d.cover.src,
+        alt: d.cover.alt,
+        caption: d.cover.caption ?? d.cover.alt,
+        title: d.cover.title,
+        description: d.cover.description,
+        width: d.cover.width,
+        height: d.cover.height,
+      }]
+    : []),
+  ...d.shots,
+];
 ---
 
 <Base title={`${d.title} — ${site.name}`} description={d.tagline}>
@@ -59,6 +80,10 @@ const sections = headings.filter((h) => h.depth === 2);
               {d.repoLabel ?? 'View source'}
             </a>
           )}
+          {/* Sits with the repo and live links because it is the same kind of
+              thing: evidence the project exists. Renders nothing when there
+              are no screens. */}
+          <ScreenGallery id={galleryId} screens={screens} projectTitle={d.title} />
         </div>
       </div>
     </header>
@@ -102,20 +127,22 @@ const sections = headings.filter((h) => h.depth === 2);
       {/* --------- the article itself --------- */}
       <div class="doc">
         {d.cover && (
-          <figure class="cover reveal">
-            {/* Eager + high priority: this is the LCP element, so lazy-loading it
-                would delay the very metric it dominates. The opposite of .shot,
-                which is below the fold and correctly lazy. */}
-            <img
-              src={d.cover.src}
-              alt={d.cover.alt}
-              width={d.cover.width}
-              height={d.cover.height}
-              loading="eager"
-              fetchpriority="high"
-              decoding="async"
-            />
-          </figure>
+          /* `priority` is the whole point here: this is the LCP element, so it
+             loads eagerly at high priority. It is the only image on the page
+             that should. */
+          <Figure
+            variant="hero"
+            priority
+            opens={galleryId}
+            class="reveal"
+            src={d.cover.src}
+            alt={d.cover.alt}
+            width={d.cover.width ?? 1600}
+            height={d.cover.height ?? 1000}
+            caption={d.cover.caption}
+            title={d.cover.title}
+            description={d.cover.description}
+          />
         )}
 
         {/* The standfirst. Stating the hard part before the prose gives the
@@ -128,17 +155,8 @@ const sections = headings.filter((h) => h.depth === 2);
           </div>
         </div>
 
-        {d.shots.length > 0 && (
-          <section class="shots">
-            <p class="mono-label reveal">Screens</p>
-            {d.shots.map((shot, i) => (
-              <figure class="shot reveal" style={`transition-delay:${i * 80}ms`}>
-                <img src={shot.src} alt={shot.caption} loading="lazy" decoding="async" />
-                <figcaption class="mono-label">{shot.caption}</figcaption>
-              </figure>
-            ))}
-          </section>
-        )}
+        {/* No inline Screens strip: `shots` feeds the gallery in the masthead
+            instead, so the screens live in one viewer rather than two places. */}
 
         <section class="next reveal">
           <a href="/#work" class="btn-ghost">← Back to all work</a>
@@ -410,6 +428,24 @@ const sections = headings.filter((h) => h.depth === 2);
   .body :global(ol) { list-style: decimal outside; }
   .body :global(ul ul) { list-style: circle outside; }
 
+  /* Images placed inline in a section, beside the prose they illustrate.
+     Markdown emits a bare <img> in a <p>; both are handled so a caption can be
+     written either as an italic line under the image or not at all. */
+  .body :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 1.75rem 0 .65rem;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: 0 14px 40px -26px rgba(0, 0, 0, .55);
+  }
+
+  /* Figures in body copy come from <Figure>, which styles its own markup and
+     wins on specificity. Nothing is defined here on purpose — two sources of
+     truth for the same element is how spacing rules start cancelling out. */
+
   .body :global(li) { margin-bottom: .55rem; }
   .body :global(li:last-child) { margin-bottom: 0; }
 
@@ -483,35 +519,8 @@ const sections = headings.filter((h) => h.depth === 2);
 
   /* --------- hero screenshot --------- */
 
-  .cover { margin: 0 0 clamp(1.5rem, 4vh, 2.25rem); }
+  /* --------- next --------- */
 
-  .cover img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 18px;
-    border: 1px solid var(--line);
-    /* A screenshot is a rectangle of someone else's UI dropped onto the page.
-       The surface behind it and a soft lift keep it sitting on the design
-       rather than punched through it. */
-    background: var(--surface);
-    box-shadow: 0 18px 50px -28px rgba(0, 0, 0, .55);
-  }
-
-  /* --------- shots --------- */
-
-  .shots { display: grid; gap: 1.25rem; padding-bottom: 2rem; }
-
-  .shot { margin: 0; display: grid; gap: .65rem; }
-
-  .shot img {
-    width: 100%;
-    border-radius: 14px;
-    border: 1px solid var(--line);
-    background: var(--surface);
-  }
-
-  .shot figcaption { color: var(--ink-3); }
 
   /* --------- next --------- */
 

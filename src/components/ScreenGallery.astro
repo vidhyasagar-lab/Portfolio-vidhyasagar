@@ -1,0 +1,437 @@
+---
+/**
+ * "See screens" — a gallery viewer: the image on a dark stage, its description
+ * in a full-height panel beside it, thumbnails on a strip beneath.
+ *
+ * The description sits in a *column*, not a band under the image. A band is
+ * sized by whatever height the image leaves over, so prose in one either clips
+ * or grows a scrollbar for three lines; a column is sized by the viewport and
+ * simply holds the text. This is the arrangement every serious media viewer
+ * uses — Google Photos, Google Images and Dropbox all put the preview on one
+ * side and its information on the other, for exactly this reason.
+ *
+ * Text is never laid over the screenshot: a screenshot is someone's UI, mostly
+ * light, and has no reliable contrast ratio. The usual fix is a 40–60% scrim,
+ * which means dimming the thing the screenshot exists to show.
+ *
+ * Each tabpanel holds both the image and its description, so selecting a
+ * thumbnail announces the whole screen rather than a caption detached from it.
+ */
+export interface Screen {
+  src: string;
+  /** For people who cannot see the image. Falls back to the caption. */
+  alt?: string;
+  /** Short line. Used as the heading when `title` is absent. */
+  caption: string;
+  title?: string;
+  description?: string;
+  width?: number;
+  height?: number;
+}
+
+interface Props {
+  screens: Screen[];
+  projectTitle: string;
+  label?: string;
+  /** Stable id so the cover image can open this gallery. Unique per page. */
+  id: string;
+}
+
+const { screens, projectTitle, label = 'See screens', id } = Astro.props;
+---
+
+{screens.length > 0 && (
+  <>
+    <button type="button" class="open btn-ghost" data-gallery={id}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="14" rx="2" />
+        <path d="m3 14 4.5-4.5 4 4 3-3L21 15" />
+      </svg>
+      {label}
+      <span class="count">{screens.length}</span>
+    </button>
+
+    <dialog id={id} class="gal" aria-label={`${projectTitle} — screens`}>
+      <div class="panel">
+        <form method="dialog">
+          <button class="x" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </form>
+
+        <div class="main">
+          {screens.map((s, i) => (
+            <div
+              role="tabpanel"
+              class="pane"
+              id={`${id}-p${i}`}
+              aria-labelledby={`${id}-t${i}`}
+              tabindex="0"
+              hidden={i !== 0}
+            >
+              <div class="stage">
+                <img src={s.src} alt={s.alt ?? s.caption}
+                  width={s.width ?? 1600} height={s.height ?? 900}
+                  loading="lazy" decoding="async" />
+              </div>
+
+              <aside class="info">
+                <p class="meta">
+                  <span class="idx">{String(i + 1).padStart(2, '0')}</span>
+                  <span class="of">/ {String(screens.length).padStart(2, '0')}</span>
+                </p>
+                <h3>{s.title ?? s.caption}</h3>
+                {s.description && <p class="desc">{s.description}</p>}
+                <p class="proj">{projectTitle}</p>
+              </aside>
+            </div>
+          ))}
+        </div>
+
+        <div class="strip" role="tablist" aria-orientation="horizontal"
+          aria-label={`${projectTitle} screens`}>
+          {screens.map((s, i) => (
+            <button
+              type="button"
+              role="tab"
+              class="thumb"
+              id={`${id}-t${i}`}
+              aria-controls={`${id}-p${i}`}
+              aria-selected={i === 0 ? 'true' : 'false'}
+              tabindex={i === 0 ? 0 : -1}
+            >
+              <img src={s.src} alt="" width={s.width ?? 1600} height={s.height ?? 900}
+                loading="lazy" decoding="async" />
+              <span class="sr">{s.title ?? s.caption}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </dialog>
+  </>
+)}
+
+<script>
+  const select = (rail: HTMLElement, next: number, focus: boolean) => {
+    const tabs = [...rail.querySelectorAll<HTMLElement>('[role="tab"]')];
+    tabs.forEach((tab, i) => {
+      const on = i === next;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;
+
+      const panel = document.getElementById(tab.getAttribute('aria-controls')!);
+      if (panel) panel.hidden = !on;
+      if (on) {
+        tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        if (focus) tab.focus();
+      }
+    });
+  };
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const opener = target.closest<HTMLElement>('[data-gallery]');
+    if (opener) {
+      const dialog = document.getElementById(opener.dataset.gallery!);
+      if (dialog instanceof HTMLDialogElement) dialog.showModal();
+      return;
+    }
+
+    const tab = target.closest<HTMLElement>('[role="tab"]');
+    if (tab) {
+      const rail = tab.closest<HTMLElement>('[role="tablist"]');
+      if (rail) select(rail, [...rail.querySelectorAll('[role="tab"]')].indexOf(tab), false);
+      return;
+    }
+
+    // Anything reaching the dialog element itself is outside .panel.
+    if (target instanceof HTMLDialogElement) target.close();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const open = document.querySelector<HTMLDialogElement>('dialog.gal[open]');
+    if (!open) return;
+
+    const rail = open.querySelector<HTMLElement>('[role="tablist"]');
+    if (!rail) return;
+
+    const tabs = [...rail.querySelectorAll<HTMLElement>('[role="tab"]')];
+    const at = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true');
+    const last = tabs.length - 1;
+
+    const to = {
+      ArrowRight: at >= last ? 0 : at + 1,
+      ArrowDown: at >= last ? 0 : at + 1,
+      ArrowLeft: at <= 0 ? last : at - 1,
+      ArrowUp: at <= 0 ? last : at - 1,
+      Home: 0,
+      End: last,
+    }[e.key];
+
+    if (to === undefined) return;
+    e.preventDefault();
+
+    // Arrows work from anywhere in the dialog, but only pull focus to the strip
+    // when focus was already there — otherwise a reader using the arrows to
+    // scroll the description would be yanked out of it.
+    select(rail, to, rail.contains(document.activeElement));
+  });
+</script>
+
+<style>
+  /* --------- trigger --------- */
+
+  .open {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    cursor: pointer;
+  }
+
+  .open svg { width: 1rem; height: 1rem; }
+
+  .count {
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    line-height: 1;
+    padding: .2rem .38rem;
+    border-radius: 5px;
+    color: var(--ink-3);
+    background: var(--bg-deep);
+    border: 1px solid var(--line);
+  }
+
+  /* --------- shell --------- */
+
+  .gal {
+    width: min(960px, 92vw);
+    /* `margin: auto` is what centres a modal dialog, and it only resolves while
+       the box still fits its containing block. The previous `max-height: none`
+       let the dialog exceed the viewport, which over-constrains the margins to
+       zero and drops it against the top edge. Both lines are load-bearing. */
+    margin: auto;
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    padding: 0;
+    border: 0;
+    background: none;
+    overflow: visible;
+    color: var(--ink);
+  }
+
+  .gal::backdrop {
+    background: rgba(3, 6, 10, .8);
+    backdrop-filter: blur(4px);
+  }
+
+  /* A definite height. The stage sizes itself against the space left over, and
+     that only works if there is a known amount of it — with max-height the
+     panel grows to the image instead. */
+  .panel {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: min(74dvh, 620px);
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: 0 40px 100px -45px rgba(0, 0, 0, .85);
+    overflow: hidden;
+  }
+
+  .x {
+    position: absolute;
+    top: .75rem;
+    right: .75rem;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition: color .2s ease, border-color .2s ease;
+  }
+
+  .x:hover { color: var(--ink); border-color: var(--line-strong); }
+  .x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .x svg { width: .95rem; height: .95rem; }
+
+  /* --------- stage + info --------- */
+
+  .main { min-height: 0; display: grid; }
+
+  .pane {
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  @media (min-width: 56rem) {
+    .pane {
+      grid-template-rows: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) 17rem;
+    }
+  }
+
+  .pane[hidden] { display: none; }
+  .pane:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+  /* Dark ground so a screenshot reads as an object sitting on the viewer
+     rather than a rectangle punched through it. */
+  .stage {
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    padding: clamp(.75rem, 2vw, 1.35rem);
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .04), transparent 60%),
+      var(--bg-deep);
+  }
+
+  .stage img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px -30px rgba(0, 0, 0, .9);
+  }
+
+  /* The description gets a column of its own, so it is bounded by the viewport
+     rather than by whatever height the image left behind. */
+  .info {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    padding: 1rem 1.1rem 1.1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+
+  @media (min-width: 56rem) {
+    .info {
+      border-top: 0;
+      border-left: 1px solid var(--line);
+      padding-top: 3rem; /* clears the close button */
+    }
+  }
+
+  .meta {
+    margin: 0;
+    font-family: var(--f-mono);
+    font-size: .72rem;
+    letter-spacing: .06em;
+  }
+
+  .idx { color: var(--accent); font-weight: 700; }
+  .of { color: var(--ink-3); }
+
+  .info h3 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 1.02rem;
+    font-weight: 700;
+    line-height: 1.28;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .desc {
+    margin: 0;
+    font-size: .845rem;
+    line-height: 1.65;
+    color: var(--ink-2);
+  }
+
+  /* Pushed to the bottom of the column, where a colophon belongs. */
+  .proj {
+    margin: auto 0 0;
+    padding-top: 1rem;
+    font-family: var(--f-mono);
+    font-size: .68rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* --------- thumbnail strip --------- */
+
+  .strip {
+    display: flex;
+    gap: .45rem;
+    padding: .55rem;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+    background: var(--surface-2);
+    border-top: 1px solid var(--line);
+    scrollbar-width: thin;
+  }
+
+  .thumb {
+    flex: 0 0 auto;
+    /* 44px floor on the target, per WCAG 2.2. */
+    width: 5.25rem;
+    min-height: 44px;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--bg-deep);
+    overflow: hidden;
+    opacity: .55;
+    transition: opacity .2s ease, border-color .2s ease, transform .2s ease;
+  }
+
+  .thumb img { display: block; width: 100%; height: auto; }
+
+  .thumb:hover { opacity: .85; }
+
+  /* Selection reads through opacity and a single accent edge — no ring around
+     the whole tile, which at three tiles was the loudest thing in the dialog. */
+  .thumb[aria-selected='true'] {
+    opacity: 1;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* --------- motion --------- */
+
+  @media (prefers-reduced-motion: no-preference) {
+    .gal[open] { animation: gal-in .3s cubic-bezier(.22, .68, .28, 1); }
+    .gal[open]::backdrop { animation: gal-fade .3s ease; }
+  }
+
+  @keyframes gal-in {
+    from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.99); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @keyframes gal-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>

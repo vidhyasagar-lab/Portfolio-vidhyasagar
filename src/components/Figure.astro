@@ -1,0 +1,358 @@
+---
+/**
+ * An inline screenshot that expands into a lightbox.
+ *
+ * The image stays visible in the flow — it is the evidence for a project with
+ * a private repo and no live demo, and hiding it behind a button would put a
+ * click in front of the one thing a reader skimming for two minutes needs to
+ * see. The image itself is the trigger, so nothing is concealed to reach the
+ * larger view and the longer description.
+ *
+ * Built on native <dialog>. `showModal()` supplies the top layer, the backdrop,
+ * Escape-to-close and the modal ARIA semantics, so there is no dependency and
+ * no hand-rolled focus trap — the W3C APA group concluded <dialog> does not
+ * need one, and trapping would only stop keyboard users reaching browser UI.
+ */
+interface Props {
+  src: string;
+  /** Describes the image for people who cannot see it. Not the caption. */
+  alt: string;
+  /** Intrinsic pixel size. Reserves the box so the page cannot reflow on load. */
+  width: number;
+  height: number;
+  /** One line under the image, for the reader who is skimming. */
+  caption?: string;
+  /** Dialog heading, and the dialog's accessible name. Falls back to `caption`. */
+  title?: string;
+  /** Two or three sentences, for the reader who stopped to look. Without it the
+      dialog is a plain zoom, which is still worth having. */
+  description?: string;
+  /**
+   * `hero` is the cover image: wider radius, and it must be `priority`, since
+   * it is the LCP element. `shot` is the Screens grid. `body` is inline prose.
+   */
+  variant?: 'body' | 'hero' | 'shot';
+  /**
+   * Loads eagerly at high priority instead of lazily. Correct for one image
+   * per page at most — the one above the fold. Setting it on a below-fold
+   * image makes it compete with the LCP element for bandwidth.
+   */
+  priority?: boolean;
+  /**
+   * Id of an existing dialog to open instead of this figure's own. Set it and
+   * no per-figure dialog is rendered at all — used for the cover, which opens
+   * the shared screen gallery so the reader lands in the same viewer whether
+   * they clicked the image or the "See screens" button.
+   */
+  opens?: string;
+  class?: string;
+  style?: string;
+}
+
+const {
+  src,
+  alt,
+  width,
+  height,
+  caption,
+  title,
+  description,
+  variant = 'body',
+  priority = false,
+  opens,
+  class: className,
+  style,
+} = Astro.props;
+
+// The dialog must be announced with a name. A heading is better than a bare
+// label, so use one when there is text to head; otherwise name it from `alt`.
+const heading = title ?? caption;
+
+// Ties the trigger to its own dialog. Random rather than derived from `src`,
+// so the same screenshot used twice on one page still gets two distinct ids.
+const id = `fig-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<figure class:list={['fig', variant, className]} {style}>
+  {/* `data-gallery` is the attribute ScreenGallery's handler listens for, so
+      delegating to it needs no extra wiring — just the other attribute name. */}
+  <button
+    type="button"
+    class="trigger"
+    data-lightbox={opens ? undefined : id}
+    data-gallery={opens}
+    aria-label={opens ? `See screens: ${heading ?? alt}` : `Expand: ${heading ?? alt}`}
+  >
+    <img
+      {src}
+      {alt}
+      {width}
+      {height}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
+      decoding="async"
+    />
+    <span class="hint" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+      </svg>
+    </span>
+  </button>
+
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+{!opens && (
+<dialog
+  id={id}
+  class="lb"
+  aria-labelledby={heading ? `${id}-title` : undefined}
+  aria-label={heading ? undefined : alt}
+>
+  {/* method="dialog" closes the dialog with no JS at all. */}
+  <form method="dialog" class="lb-dismiss">
+    <button aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+    </button>
+  </form>
+
+  <div class="lb-inner">
+    {/* Same URL as the inline copy, so opening the dialog costs no second
+        download — the browser serves it from cache. */}
+    <img {src} {alt} {width} {height} loading="lazy" decoding="async" />
+    {(heading || description) && (
+      <div class="lb-text">
+        {heading && <h3 id={`${id}-title`}>{heading}</h3>}
+        {description && <p>{description}</p>}
+      </div>
+    )}
+  </div>
+</dialog>
+)}
+
+<script>
+  // Delegated, so this runs once for the page no matter how many figures it
+  // holds. Astro bundles a component's script once, not per instance.
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const trigger = target.closest<HTMLElement>('[data-lightbox]');
+    if (trigger) {
+      const dialog = document.getElementById(trigger.dataset.lightbox!);
+      if (dialog instanceof HTMLDialogElement) dialog.showModal();
+      return;
+    }
+
+    // Clicking the backdrop reports the dialog itself as the target. The
+    // content sits inside .lb-inner, so anything that reaches the dialog
+    // element is outside the panel.
+    if (target instanceof HTMLDialogElement) target.close();
+  });
+</script>
+
+<style>
+  /* --------- inline figure --------- */
+
+  /* One knob per variant rather than three near-duplicate rulesets. The radius
+     travels down to both the trigger and the image so the focus ring, the
+     border and the corner all agree. */
+  .fig {
+    --fig-radius: 14px;
+    margin: 1.75rem 0;
+  }
+
+  /* The cover. Sits directly above the standfirst, so its only margin is below. */
+  .fig.hero {
+    --fig-radius: 18px;
+    margin: 0 0 clamp(1.5rem, 4vh, 2.25rem);
+  }
+
+  /* Inside the Screens grid, which owns the spacing between entries. */
+  .fig.shot {
+    margin: 0;
+  }
+
+  /* The trigger is a real <button>, so Enter and Space work and the control is
+     announced as one. Everything a button normally paints is stripped. */
+  .trigger {
+    display: block;
+    position: relative;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+    border-radius: var(--fig-radius);
+  }
+
+  .trigger img {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    border-radius: var(--fig-radius);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: 0 14px 40px -26px rgba(0, 0, 0, .55);
+    transition: border-color .25s ease, box-shadow .25s ease;
+  }
+
+  .trigger:hover img,
+  .trigger:focus-visible img {
+    border-color: var(--line-strong);
+    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, .6);
+  }
+
+  .trigger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* Affordance. Hidden until hover on pointer devices, always shown on touch,
+     where there is no hover to reveal it. */
+  .hint {
+    position: absolute;
+    top: .7rem;
+    right: .7rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity .25s ease;
+  }
+
+  .hint svg { width: .95rem; height: .95rem; }
+
+  .trigger:hover .hint,
+  .trigger:focus-visible .hint { opacity: 1; }
+
+  @media (hover: none) {
+    .hint { opacity: 1; }
+  }
+
+  figcaption {
+    margin-top: .65rem;
+    font-family: var(--f-mono);
+    font-size: .72rem;
+    letter-spacing: .04em;
+    color: var(--ink-3);
+  }
+
+  /* --------- lightbox --------- */
+
+  .lb {
+    /* The dialog is only the stage; .lb-inner is the panel. Keeping the dialog
+       itself transparent and padded means a click anywhere around the panel
+       lands on the dialog element and closes it. */
+    max-width: min(960px, 92vw);
+    /* Explicit, because `margin: auto` is what centres a modal dialog and it
+       only resolves while the box still fits its containing block. */
+    margin: auto;
+    max-height: calc(100dvh - 2rem);
+    padding: clamp(1rem, 3vw, 2rem);
+    border: 0;
+    background: none;
+    overflow: auto;
+    overscroll-behavior: contain;
+    color: var(--ink);
+  }
+
+  .lb::backdrop {
+    background: rgba(3, 6, 10, .72);
+    backdrop-filter: blur(3px);
+  }
+
+  .lb-inner {
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: 0 40px 90px -40px rgba(0, 0, 0, .75);
+  }
+
+  .lb-inner img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lb-text {
+    padding: clamp(1.1rem, 2.4vw, 1.6rem);
+  }
+
+  .lb-text h3 {
+    margin: 0 0 .5rem;
+    font-family: var(--f-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .lb-text p {
+    margin: 0;
+    max-width: 62ch;
+    font-size: .95rem;
+    line-height: 1.7;
+    color: var(--ink-2);
+  }
+
+  .lb-dismiss {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: .6rem;
+  }
+
+  .lb-dismiss button {
+    display: grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition: border-color .2s ease, color .2s ease;
+  }
+
+  .lb-dismiss button:hover { border-color: var(--line-strong); }
+
+  .lb-dismiss button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .lb-dismiss svg { width: 1rem; height: 1rem; }
+
+  /* --------- motion --------- */
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lb[open] { animation: lb-in .28s cubic-bezier(.22, .68, .28, 1); }
+    .lb[open]::backdrop { animation: lb-fade .28s ease; }
+  }
+
+  @keyframes lb-in {
+    from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.985); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @keyframes lb-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+</style>

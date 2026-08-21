@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Placeholder wireframe of a generated course">
+  <rect width="1600" height="900" fill="#0F151D"/>
+  <rect x="0" y="0" width="1600" height="56" fill="#161D27"/>
+  <circle cx="34" cy="28" r="7" fill="#F0A02E"/>
+  <rect x="56" y="22" width="150" height="12" rx="6" fill="#2B3644"/>
+  <rect x="0" y="56" width="380" height="844" fill="#131A23"/>
+  <rect x="32" y="96" width="130" height="12" rx="6" fill="#2B3644"/>
+  <g>
+    <rect x="24" y="140" width="332" height="58" rx="10" fill="#1B2530" stroke="#2E3948"/>
+    <rect x="44" y="160" width="200" height="11" rx="5" fill="#3A4757"/>
+    <rect x="44" y="180" width="140" height="9" rx="4" fill="#28313D"/>
+  </g>
+  <g fill="none">
+    <rect x="24" y="214" width="332" height="58" rx="10" fill="#161E28"/>
+    <rect x="24" y="288" width="332" height="58" rx="10" fill="#161E28"/>
+    <rect x="24" y="362" width="332" height="58" rx="10" fill="#161E28"/>
+    <rect x="24" y="436" width="332" height="58" rx="10" fill="#161E28"/>
+  </g>
+  <g fill="#242E3A">
+    <rect x="44" y="234" width="190" height="11" rx="5"/><rect x="44" y="254" width="130" height="9" rx="4"/>
+    <rect x="44" y="308" width="210" height="11" rx="5"/><rect x="44" y="328" width="120" height="9" rx="4"/>
+    <rect x="44" y="382" width="176" height="11" rx="5"/><rect x="44" y="402" width="146" height="9" rx="4"/>
+    <rect x="44" y="456" width="200" height="11" rx="5"/><rect x="44" y="476" width="118" height="9" rx="4"/>
+  </g>
+  <rect x="440" y="104" width="520" height="22" rx="11" fill="#2B3644"/>
+  <g fill="#1E2733">
+    <rect x="440" y="164" width="1080" height="12" rx="6"/>
+    <rect x="440" y="192" width="1040" height="12" rx="6"/>
+    <rect x="440" y="220" width="1096" height="12" rx="6"/>
+    <rect x="440" y="248" width="880" height="12" rx="6"/>
+  </g>
+  <rect x="440" y="300" width="1080" height="120" rx="12" fill="#151D26" stroke="#232D3A"/>
+  <rect x="470" y="330" width="300" height="11" rx="5" fill="#2B3644"/>
+  <rect x="470" y="356" width="700" height="10" rx="5" fill="#212A36"/>
+  <rect x="470" y="380" width="600" height="10" rx="5" fill="#212A36"/>
+  <g fill="#1E2733">
+    <rect x="440" y="456" width="1060" height="12" rx="6"/>
+    <rect x="440" y="484" width="1010" height="12" rx="6"/>
+    <rect x="440" y="512" width="1090" height="12" rx="6"/>
+    <rect x="440" y="540" width="820" height="12" rx="6"/>
+    <rect x="440" y="568" width="960" height="12" rx="6"/>
+  </g>
+  <text x="800" y="848" text-anchor="middle" font-family="ui-monospace,Consolas,monospace" font-size="19" letter-spacing="4" fill="#4A586A">PLACEHOLDER · GENERATED COURSE · 1600x900</text>
+</svg>
