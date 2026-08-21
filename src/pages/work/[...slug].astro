@@ -246,6 +246,25 @@ const sections = headings.filter((h) => h.depth === 2);
       position: sticky;
       top: 6rem;
       align-self: start;
+      /* A sticky element taller than the viewport strands its own bottom:
+         it stays pinned at `top`, so the overflow below the fold can never
+         be scrolled into view. Bounding it to the visible height and letting
+         it scroll internally is what makes the last group reachable. */
+      max-height: calc(100vh - 7.5rem);
+      overflow-y: auto;
+      /* Don't hand the scroll back to the page when the rail hits its end. */
+      overscroll-behavior: contain;
+      padding-right: .4rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+
+    /* WebKit needs its own pass; the rail is chrome, so keep it faint. */
+    .rail::-webkit-scrollbar { width: 6px; }
+    .rail::-webkit-scrollbar-track { background: transparent; }
+    .rail::-webkit-scrollbar-thumb {
+      background: var(--line-strong);
+      border-radius: 3px;
     }
   }
 
@@ -373,17 +392,35 @@ const sections = headings.filter((h) => h.depth === 2);
     scroll-margin-top: 5.5rem;
   }
 
+  /* Two things have to be undone for markers to appear inside prose.
+     1. Tailwind's preflight sets `ol,ul,menu{list-style:none}` site-wide, so the
+        list type has to be put back explicitly — nothing else here restores it.
+     2. Not display:grid. Grid turns the <li>s into grid items, which don't lay
+        out a marker box, so spacing comes from margins on the items instead. */
   .body :global(ul),
   .body :global(ol) {
-    margin: 1rem 0;
-    padding-left: 1.25rem;
-    display: grid;
-    gap: .45rem;
+    margin: 1.25rem 0;
+    /* Wide enough for a two-digit marker plus its gap, so "10." doesn't clip. */
+    padding-left: 1.75rem;
     color: var(--ink-2);
     line-height: 1.7;
   }
 
-  .body :global(li::marker) { color: var(--accent); }
+  .body :global(ul) { list-style: disc outside; }
+  .body :global(ol) { list-style: decimal outside; }
+  .body :global(ul ul) { list-style: circle outside; }
+
+  .body :global(li) { margin-bottom: .55rem; }
+  .body :global(li:last-child) { margin-bottom: 0; }
+
+  .body :global(li::marker) {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Nested lists shouldn't inherit the outer list's top margin. */
+  .body :global(li > ul),
+  .body :global(li > ol) { margin: .55rem 0 0; }
 
   .body :global(blockquote) {
     margin: 1.75rem 0;
