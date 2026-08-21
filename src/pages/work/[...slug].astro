@@ -230,7 +230,13 @@ const sections = headings.filter((h) => h.depth === 2);
   }
 
   @media (min-width: 64rem) {
-    .layout { grid-template-columns: 14rem minmax(0, 1fr); gap: 4rem; }
+    /* The article fills the full .shell width — no centred column, no empty
+       band beside the text. Long lines are the cost, so the type below is set
+       looser and slightly larger to keep them tracking. */
+    .layout {
+      grid-template-columns: 14rem minmax(0, 1fr);
+      gap: 4rem;
+    }
   }
 
   .rail { display: grid; gap: 1.75rem; align-content: start; }
@@ -326,7 +332,6 @@ const sections = headings.filter((h) => h.depth === 2);
   .doc { min-width: 0; }
 
   .lede {
-    max-width: var(--measure);
     font-family: var(--f-display);
     font-weight: 600;
     font-size: clamp(1.15rem, 2.2vw, 1.45rem);
@@ -339,15 +344,15 @@ const sections = headings.filter((h) => h.depth === 2);
 
   .body { padding-block: clamp(1.75rem, 5vh, 2.5rem); }
 
-  /* The measure cap. Without it the column inherits .shell's 82rem and body
-     text runs past 150 characters a line, which is why this never read like
-     an article no matter what the type was doing. */
-  .prose { max-width: var(--measure); }
+  /* Full width by choice. The counterweight is below: longer lines need more
+     leading and more space between paragraphs, or the eye loses its place on
+     the return sweep. */
+  .prose { max-width: none; }
 
   .body :global(p) {
-    margin: 0 0 1.15em;
-    font-size: 1.02rem;
-    line-height: 1.75;
+    margin: 0 0 1.4em;
+    font-size: 1.06rem;
+    line-height: 1.85;
     color: var(--ink-2);
   }
 
