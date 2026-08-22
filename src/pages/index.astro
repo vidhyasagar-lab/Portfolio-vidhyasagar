@@ -8,6 +8,13 @@ import { site, cv } from '../site';
 
 const projects = (await getCollection('projects', ({ data }) => !data.draft))
   .sort((a, b) => a.data.order - b.data.order);
+
+/** "Two systems" reads better than "2 systems"; past six, the digit is fine. */
+function countWord(n: number): string {
+  const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+  const word = words[n] ?? String(n);
+  return `${word} ${n === 1 ? 'system' : 'systems'}`;
+}
 ---
 
 <Base>
@@ -68,8 +75,10 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
   <section id="work" class="shell block">
     <header class="block-head reveal">
       <p class="mono-label">Selected work</p>
-      <h2>Three systems, and what each one taught me.</h2>
-      <p class="prose">Source and a running deployment on every one.</p>
+      {/* Counted from the collection, not typed. A hard-coded number goes stale
+          the first time a project is added or removed — as it already had. */}
+      <h2>{countWord(projects.length)}, and what each one taught me.</h2>
+      <p class="prose">Written up from the code: the architecture, the trade-offs, and what broke.</p>
     </header>
 
     {projects.length === 0 ? (
@@ -383,12 +392,15 @@ const projects = (await getCollection('projects', ({ data }) => !data.draft))
 
   /* ---------------- blocks ---------------- */
 
-  .block { padding-block: clamp(3.5rem, 9vh, 6rem); }
+  /* Applies to top AND bottom, so the gap a reader sees between two sections is
+     twice this. Keep that in mind before raising it: at the old
+     clamp(3.5rem, 9vh, 6rem) adjacent sections sat up to 12rem apart. */
+  .block { padding-block: clamp(2.5rem, 5.5vh, 4rem); }
 
   .block-head {
     display: grid;
     gap: .85rem;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
   }
 
   .block-head h2 {

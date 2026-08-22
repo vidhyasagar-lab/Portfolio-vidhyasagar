@@ -1,0 +1,222 @@
+---
+title: "ZenFit"
+tagline: "A fitness platform where two LangGraph agent teams write personalised training and nutrition plans — eleven specialists, each owning one domain, converging on a single plan."
+role: "Sole engineer — agent graphs, domain model, application, security, CI"
+period: "2026"
+stack: ["Python", "FastAPI", "LangGraph", "LangChain", "Azure OpenAI", "SQLAlchemy", "Alembic", "HTMX", "Docker"]
+# Private repo, so the link points at the profile and says so. A "View source"
+# button that doesn't reach the source is a 404 with better manners.
+repo: "https://github.com/vidhyasagar-lab"
+repoLabel: "GitHub profile"
+problem: "A model will happily tell someone to eat 900 calories a day. The engineering problem in a fitness app is not generating a plan — it is deciding which parts of that plan a language model is allowed to decide at all."
+# Screens go here. Until then the "See screens" button does not render.
+shots: []
+outcomes:
+  - metric: "11"
+    label: "agents across two LangGraph graphs"
+  - metric: "25"
+    label: "tables behind the domain model"
+  - metric: "78"
+    label: "tests, with migrations checked in CI"
+featured: true
+order: 2
+---
+
+ZenFit turns a fitness profile into a training programme and a diet plan: a four-week
+periodised workout schedule, a seven-day meal plan costed in rupees, and coaching that adapts
+as weight, sleep and adherence get logged.
+
+It is a full application rather than an agent demo — two agent graphs, twenty-five tables, a
+server-rendered interface, authentication, and a migration suite the CI proves it can build
+from nothing and tear back down.
+
+## What it does
+
+**A profile, then a programme.** Age, weight, target weight, experience level, equipment,
+training days, session length, diet preference, allergies, health conditions. From that, two
+independent agent teams produce a workout programme and a diet plan.
+
+**Everything is localised to India, deliberately.** Meals are dal, roti, paneer, poha, sprouts.
+Groceries are priced in rupees and grouped the way Indian stores are. Meal timings follow
+Indian eating patterns. Measurements are metric only. This is a constraint carried through
+every prompt in the system, not a translation layer bolted on afterwards.
+
+**It keeps watching.** Weight, sleep, water, body measurements, workout sets and daily
+check-ins are all logged, and the adaptation agents read those trends back when a plan is
+regenerated.
+
+## Two graphs, eleven agents
+
+Both planners are LangGraph `StateGraph`s, each compiled once at module level and reused
+across requests rather than rebuilt per call.
+
+The **workout planner** runs five specialists and an assembler:
+
+```
+profile_analyst → periodization_planner → exercise_selector
+                                               ├── nutrition_sync ──┐
+                                               └── adaptation ──────┴→ assemble → END
+```
+
+The profile analyst produces an athlete brief. The periodization planner designs a four-week
+progressive-overload structure. The exercise selector fills each day with specific movements —
+sets, reps, RPE, tempo, form cues, substitutions. Then the graph **fans out**: nutrition sync
+and the adaptation agent have no dependency on each other, so they run in the same superstep
+and the assembler waits for both.
+
+The **diet planner** runs six, with a wider fan-out:
+
+```
+nutrition_analyst → meal_architect → recipe_selector
+                                          ├── macro_balancer ────┐
+                                          ├── grocery_planner ───┤
+                                          └── diet_adaptation ───┴→ assemble → END
+```
+
+Three agents in parallel after the recipes are chosen, because macros, groceries and
+adaptation notes are three independent readings of the same meal plan.
+
+The fan-out is the whole reason for the graph. A single prompt asked to do all of this
+produces something that is adequate at each part and good at none; splitting it lets each
+agent hold one domain and lets the independent ones run at the same time.
+
+## Numbers the model is not allowed to invent
+
+This is the decision the rest of the system is built around.
+
+Basal metabolic rate, total daily energy expenditure and the daily calorie target are
+**computed in Python** — Mifflin-St Jeor, an activity multiplier, then a fixed offset per goal:
+a 500 kcal deficit to lose weight, a 350 kcal surplus to gain muscle. The results are handed
+to the model as facts it must use:
+
+```
+PRE-CALCULATED VALUES (use these exact numbers — do NOT recalculate):
+- BMR: {bmr} kcal/day (Mifflin-St Jeor)
+- TDEE: {tdee} kcal/day (activity factor: {activity_level})
+- Target intake: {target_cal} kcal/day
+```
+
+The model writes the plan. It does not do the arithmetic that decides how much someone eats.
+
+That arithmetic also carries a floor that no prompt could reliably enforce:
+
+```python
+if fitness_goal == "lose_weight":
+    floor = MIN_CALORIES.get(gender, MIN_CALORIES["female"])
+    return max(floor, tdee - WEIGHT_LOSS_DEFICIT)
+```
+
+A small, sedentary user with an aggressive target would otherwise land on a number no one
+should be told to eat. The floor is 1,200 kcal for women and 1,400 for men, and it is a
+`max()` in a pure function — not an instruction a model may or may not follow.
+
+The module exists because of a bug worth recording. Its own docstring says it plainly:
+
+> Both plan generators — the direct LLM path and the agentic diet planner — used to carry
+> their own copy of this, and they disagreed: the same user was told to eat `tdee + 300` on
+> one screen and `tdee + 350` on another.
+
+Two copies of the same domain rule drifted, and the app quietly contradicted itself. Every
+calorie figure now comes from one module.
+
+## When the model fails
+
+Every LLM call in the system goes through one wrapper, and it treats failures as different
+kinds of thing rather than one generic error.
+
+Each call runs under `asyncio.wait_for` — 120 seconds normally, 180 for the assemblers, which
+have the most to write. Failures are classified: a timeout raises `AITimeoutError`, a rate
+limit raises `AIRateLimitError`, everything else raises `AIServiceError`. The classification
+changes the behaviour — **a rate limit breaks out of the retry loop immediately**, because
+retrying a quota failure a second later only spends the quota again. A content-filter trip is
+retried once, since it is often transient.
+
+An empty response is caught explicitly rather than passed downstream as a valid-looking
+result, and the `finish_reason` and token usage are logged with it — the difference between
+"the model refused" and "the model ran out of output tokens" is invisible unless you record it
+at the moment it happens.
+
+The diet assembler also trims each specialist's output before combining them — 6,000
+characters for the meal plan, 1,500 for the adaptation notes. Six agents writing freely into
+one final prompt is how a fan-in node starts timing out.
+
+## Treating generated HTML as hostile
+
+Both assemblers return HTML, which is then rendered into the page. Two things stand between
+the model and the DOM.
+
+**The output is constrained to a fixed vocabulary of classes.** The assembler is given the
+exact `wp-*` and `dp-*` class names the template already styles, and told not to invent
+others — so the plan cannot arrive wearing styles that do not exist, and cannot smuggle in
+arbitrary utility classes.
+
+**Then it is sanitised anyway**, with `bleach`, against an allow-list of tags and attributes.
+The attribute filter drops any `on*` handler, rejects `javascript:`, `data:` and `vbscript:`
+URIs, permits `<input>` only when it is a checkbox — the grocery list needs them — and passes
+inline styles through a regex allow-list of safe CSS properties. Every route that renders
+model output calls it.
+
+The prompt is a formatting contract. The sanitiser is the part that assumes the contract will
+one day be broken.
+
+## Security
+
+User-supplied free text — names, allergies, health conditions, chat messages, injury
+descriptions — is stripped of newlines and control characters, has prompt-style markers and
+separator runs removed, and is truncated before it is allowed near a prompt.
+
+- **Passwords** — a policy of 8+ characters with upper case, lower case, a digit and a symbol,
+  enforced in registration, password reset and both admin paths.
+- **CSRF** — a same-origin check on `Origin` or `Referer` first, then a double-submit token
+  compared with `secrets.compare_digest`. The token arrives in an `X-CSRF-Token` header or a
+  form field; when it comes from a form the middleware reads the body and then replays it, so
+  the route still receives its stream intact.
+- **Rate limiting** — sliding windows on login (10/min), registration (5 per 5 min), password
+  reset (5 per 15 min) and AI generation (10/min, keyed per user). The AI limiter guards every
+  generation endpoint, which is where the money is.
+- **Client IP** — `X-Forwarded-For` is only trusted when the peer is a known proxy. Trusting it
+  unconditionally would let anyone rate-limit themselves out of existence, or into it.
+- **Headers** — a Content Security Policy plus `nosniff`, `X-Frame-Options: DENY`, HSTS,
+  a referrer policy, and a permissions policy disabling camera, microphone and geolocation.
+- **Bodies** — capped at 1 MB in middleware, before a route ever sees the request.
+
+## Data and delivery
+
+Twenty-five SQLAlchemy tables covering profiles and plans, tracking (weight, sleep, water,
+measurements, check-ins), workout sessions and sets, gamification (XP, badges, challenges), a
+trainer marketplace with requests, messages and ratings, community posts, password-reset
+tokens and an audit log.
+
+The interface is server-rendered Jinja with HTMX swapping fragments — no SPA framework and no
+build step. The CSRF token is injected into every form and every HTMX request.
+
+The part I would point at is the CI. It does not only run the 78 tests:
+
+```yaml
+- name: Check migrations build a database from scratch
+  run: |
+    uv run python -m alembic upgrade head
+    uv run python -m alembic downgrade base
+
+- name: Check models and migrations agree
+  run: |
+    uv run python -m alembic upgrade head
+    uv run python -m alembic check
+```
+
+The first step proves the migrations can build the schema from nothing **and unwind it**. The
+second proves the models and the migrations have not drifted apart — the failure that is
+invisible in development, where the database was built incrementally and already has the
+column someone forgot to write a migration for.
+
+## The principle behind it
+
+The interesting question in this system was never how to make a model write a good training
+plan. It was where to put the boundary.
+
+Anything with a right answer — the calorie maths, the safety floor, the schema, the sanitiser
+— lives in Python, where it can be tested and where it behaves the same way every time.
+Everything above that line is judgement, and judgement is what the eleven agents are for.
+
+Getting a model to produce something usable is prompt work. Deciding what it is allowed to
+decide is the engineering.

@@ -421,8 +421,14 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 /* Layer order: aurora (0) -> pinned WebGL field (1) -> content (2) -> nav (50).
-   Sections must stay transparent so the field reads through them. */
-main, footer { position: relative; z-index: 2; }
+   Sections must stay transparent so the field reads through them.
+
+   `.foot`, not `footer`: the bare element selector also matched the <footer>
+   inside every project card, lifting it to z-index 2 and so above the card's
+   own stretched link at z-index 1 — which made "Read case study" the one part
+   of the card that could not be clicked. Page landmarks get classes here for
+   exactly this reason. */
+main, .foot { position: relative; z-index: 2; }
 
 @media (prefers-reduced-transparency: reduce) {
   .ambient .blob { display: none; }
