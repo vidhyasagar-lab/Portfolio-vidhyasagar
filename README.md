@@ -23,19 +23,19 @@ URL (`retrieval-eval-harness.mdx` → `/work/retrieval-eval-harness`).
 Frontmatter fields are validated by the schema in `src/content.config.ts` — the build fails loudly
 if one is missing or malformed, which is deliberate.
 
-| Field | Required | Notes |
-| --- | --- | --- |
-| `title` | yes | |
-| `tagline` | yes | One line, plain language |
-| `role` | yes | What *you* owned — reviewers look for this first |
-| `period` | yes | e.g. `"2025"` |
-| `stack` | yes | Array, most relevant first; first 5 show on the card |
-| `problem` | yes | The hardest part, one sentence |
-| `repo` / `live` | no | Both render as buttons. **Aim to always have `live`.** |
-| `outcomes` | no | `{ metric, label }` — quantified impact, not tech names |
-| `shots` | no | `{ src, caption }` — put images in `public/shots/` |
-| `order` | no | Sort order on the homepage (default 99) |
-| `draft` | no | `true` hides it from build output |
+| Field               | Required | Notes                                                         |
+| ------------------- | -------- | ------------------------------------------------------------- |
+| `title`           | yes      |                                                               |
+| `tagline`         | yes      | One line, plain language                                      |
+| `role`            | yes      | What *you* owned — reviewers look for this first           |
+| `period`          | yes      | e.g. `"2025"`                                               |
+| `stack`           | yes      | Array, most relevant first; first 5 show on the card          |
+| `problem`         | yes      | The hardest part, one sentence                                |
+| `repo` / `live` | no       | Both render as buttons. **Aim to always have `live`.** |
+| `outcomes`        | no       | `{ metric, label }` — quantified impact, not tech names    |
+| `shots`           | no       | `{ src, caption }` — put images in `public/shots/`       |
+| `order`           | no       | Sort order on the homepage (default 99)                       |
+| `draft`           | no       | `true` hides it from build output                           |
 
 Body structure that the design expects (and that the research says reviewers want):
 
