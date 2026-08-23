@@ -1,0 +1,66 @@
+---
+/**
+ * Frame for an inline SVG architecture diagram in a case study.
+ *
+ * The SVG is slotted rather than generated, because these are all different
+ * shapes — a loop-bearing agent graph and a fan-out both read badly through a
+ * generic node/edge renderer.
+ *
+ * Colours inside the slotted SVG come from the site's own theme tokens via
+ * `fill="var(--surface)"` and friends: SVG presentation attributes are parsed
+ * as CSS values, so a custom property works there and the diagram follows the
+ * light/dark switch with no second copy.
+ *
+ * `label` is what a screen reader gets — the whole point of a diagram is lost
+ * on one, so write the flow out as a sentence, not "architecture diagram".
+ */
+interface Props {
+  /** Sentence describing the flow, for anyone who cannot see the image. */
+  label: string;
+  caption?: string;
+}
+
+const { label, caption } = Astro.props;
+---
+
+<figure class="diagram">
+  <div class="scroll" role="img" aria-label={label}>
+    <slot />
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .diagram {
+    margin: 1.9rem 0;
+  }
+
+  /* Wide diagrams scroll inside their own box; the page body never scrolls
+     sideways. */
+  .scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 1.35rem 1.25rem;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 62%),
+      var(--surface);
+    scrollbar-width: thin;
+  }
+
+  .diagram :global(svg) {
+    display: block;
+    width: 100%;
+    min-width: 30rem;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: .7rem;
+    font-family: var(--f-mono);
+    font-size: .72rem;
+    letter-spacing: .04em;
+    color: var(--ink-3);
+  }
+</style>

@@ -4,10 +4,10 @@ tagline: "A fitness platform where two LangGraph agent teams write personalised 
 role: "Sole engineer — agent graphs, domain model, application, security, CI"
 period: "2026"
 stack: ["Python", "FastAPI", "LangGraph", "LangChain", "Azure OpenAI", "SQLAlchemy", "Alembic", "HTMX", "Docker"]
-# Private repo, so the link points at the profile and says so. A "View source"
-# button that doesn't reach the source is a 404 with better manners.
-repo: "https://github.com/vidhyasagar-lab"
-repoLabel: "GitHub profile"
+# Points straight at the repo. Note it is currently private, so a visitor
+# without access lands on GitHub's 404 — make the repo public for this link to
+# resolve for anyone.
+repo: "https://github.com/vidhyasagar-lab/ZENFIT---AI"
 problem: "A model will happily tell someone to eat 900 calories a day. The engineering problem in a fitness app is not generating a plan — it is deciding which parts of that plan a language model is allowed to decide at all."
 # Screens go here. Until then the "See screens" button does not render.
 shots: []
@@ -21,6 +21,8 @@ outcomes:
 featured: true
 order: 2
 ---
+
+import Diagram from '../../components/Diagram.astro';
 
 ZenFit turns a fitness profile into a training programme and a diet plan: a four-week
 periodised workout schedule, a seven-day meal plan costed in rupees, and coaching that adapts
@@ -52,11 +54,68 @@ across requests rather than rebuilt per call.
 
 The **workout planner** runs five specialists and an assembler:
 
-```
-profile_analyst → periodization_planner → exercise_selector
-                                               ├── nutrition_sync ──┐
-                                               └── adaptation ──────┴→ assemble → END
-```
+<Diagram
+  label="Workout planner graph. profile_analyst runs first, then periodization_planner, then exercise_selector. exercise_selector fans out to nutrition_sync and adaptation, which run in parallel in the same superstep. Both converge on assemble_final_plan, which ends the run."
+  caption="The two branches after exercise_selector run in one superstep; the assembler waits for both."
+>
+<svg viewBox="0 0 640 452" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="zw-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#zw-arrow)">
+    <path d="M320,62 V92" />
+    <path d="M320,134 V164" />
+    <path d="M320,206 V227 H175 V248" />
+    <path d="M320,206 V227 H465 V248" />
+    <path d="M175,290 V311 H320 V332" />
+    <path d="M465,290 V311 H320 V332" />
+    <path d="M320,374 V404" />
+  </g>
+
+  {/* Bracket marking the parallel step. */}
+  <path d="M96,238 V232 H544 V238" fill="none" stroke="var(--accent)"
+    stroke-width="1.1" stroke-dasharray="4 3" opacity=".75" />
+  <text x="320" y="226" font-family="var(--f-mono)" font-size="10" fill="var(--accent)"
+    text-anchor="middle">same superstep</text>
+
+  <g font-family="var(--f-mono)" font-size="12" fill="var(--ink)" text-anchor="middle">
+    {/* Reads and analyses data — blue */}
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="235" y="20"  width="170" height="42" rx="9" />
+      <rect x="380" y="248" width="170" height="42" rx="9" />
+    </g>
+
+    {/* Writes plan content — violet */}
+    <g fill="color-mix(in srgb, #8B7CF6 14%, var(--surface))"
+      stroke="color-mix(in srgb, #8B7CF6 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="228" y="92"  width="185" height="42" rx="9" />
+      <rect x="235" y="164" width="170" height="42" rx="9" />
+      <rect x="90"  y="248" width="170" height="42" rx="9" />
+    </g>
+
+    {/* Produces the final artefact — green */}
+    <rect x="228" y="332" width="185" height="42" rx="9"
+      fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <rect x="290" y="404" width="60" height="28" rx="14"
+      fill="none" stroke="var(--line-strong)" stroke-width="1.2" />
+
+    <text x="320" y="46">profile_analyst</text>
+    <text x="320" y="118">periodization_planner</text>
+    <text x="320" y="190">exercise_selector</text>
+    <text x="175" y="274">nutrition_sync</text>
+    <text x="465" y="274">adaptation</text>
+    <text x="320" y="358">assemble_final_plan</text>
+    <text x="320" y="423" font-size="10" fill="var(--ink-3)">END</text>
+  </g>
+</svg>
+</Diagram>
 
 The profile analyst produces an athlete brief. The periodization planner designs a four-week
 progressive-overload structure. The exercise selector fills each day with specific movements —
@@ -66,12 +125,75 @@ and the assembler waits for both.
 
 The **diet planner** runs six, with a wider fan-out:
 
-```
-nutrition_analyst → meal_architect → recipe_selector
-                                          ├── macro_balancer ────┐
-                                          ├── grocery_planner ───┤
-                                          └── diet_adaptation ───┴→ assemble → END
-```
+<Diagram
+  label="Diet planner graph. nutrition_analyst runs first, then meal_architect, then recipe_selector. recipe_selector fans out to three agents in parallel: macro_balancer, grocery_planner and diet_adaptation. All three converge on assemble_final_diet_plan, which ends the run."
+  caption="Three independent readings of the same meal plan, taken at once."
+>
+<svg viewBox="0 0 780 452" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="zd-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#zd-arrow)">
+    <path d="M390,62 V92" />
+    <path d="M390,134 V164" />
+    <path d="M390,206 V227 H130 V248" />
+    <path d="M390,206 V248" />
+    <path d="M390,206 V227 H650 V248" />
+    <path d="M130,290 V311 H390 V332" />
+    <path d="M390,290 V332" />
+    <path d="M650,290 V311 H390 V332" />
+    <path d="M390,374 V404" />
+  </g>
+
+  <path d="M50,238 V232 H730 V238" fill="none" stroke="var(--accent)"
+    stroke-width="1.1" stroke-dasharray="4 3" opacity=".75" />
+  <text x="390" y="226" font-family="var(--f-mono)" font-size="10" fill="var(--accent)"
+    text-anchor="middle">same superstep</text>
+
+  <g font-family="var(--f-mono)" font-size="12" fill="var(--ink)" text-anchor="middle">
+    {/* Reads and analyses — blue */}
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="305" y="20"  width="170" height="42" rx="9" />
+      <rect x="565" y="248" width="170" height="42" rx="9" />
+    </g>
+
+    {/* Writes plan content — violet */}
+    <g fill="color-mix(in srgb, #8B7CF6 14%, var(--surface))"
+      stroke="color-mix(in srgb, #8B7CF6 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="305" y="92"  width="170" height="42" rx="9" />
+      <rect x="305" y="164" width="170" height="42" rx="9" />
+      <rect x="305" y="248" width="170" height="42" rx="9" />
+    </g>
+
+    {/* Checks the numbers — teal */}
+    <rect x="45" y="248" width="170" height="42" rx="9"
+      fill="color-mix(in srgb, #2DB4A0 14%, var(--surface))"
+      stroke="color-mix(in srgb, #2DB4A0 58%, var(--line-strong))" stroke-width="1.3" />
+
+    {/* Produces the final artefact — green */}
+    <rect x="290" y="332" width="200" height="42" rx="9"
+      fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <rect x="360" y="404" width="60" height="28" rx="14"
+      fill="none" stroke="var(--line-strong)" stroke-width="1.2" />
+
+    <text x="390" y="46">nutrition_analyst</text>
+    <text x="390" y="118">meal_architect</text>
+    <text x="390" y="190">recipe_selector</text>
+    <text x="130" y="274">macro_balancer</text>
+    <text x="390" y="274">grocery_planner</text>
+    <text x="650" y="274">diet_adaptation</text>
+    <text x="390" y="358" font-size="11">assemble_final_diet_plan</text>
+    <text x="390" y="423" font-size="10" fill="var(--ink-3)">END</text>
+  </g>
+</svg>
+</Diagram>
 
 Three agents in parallel after the recipes are chosen, because macros, groceries and
 adaptation notes are three independent readings of the same meal plan.

@@ -1,0 +1,351 @@
+---
+title: "AskDB"
+tagline: "Ask a PostgreSQL database a question in English and get an answer — a ten-node LangGraph pipeline that plans, writes, checks and repairs its own SQL before anything touches the database."
+role: "Sole engineer — agent pipeline, SQL safety, PII layer, application, CI"
+period: "2026"
+stack: ["Python", "LangGraph", "LangChain", "Azure OpenAI", "PostgreSQL", "SQLAlchemy", "Presidio", "Langfuse", "FastAPI", "HTMX"]
+# Points straight at the repo. Note it is currently private, so a visitor
+# without access lands on GitHub's 404 — make the repo public for this link to
+# resolve for anyone.
+repo: "https://github.com/vidhyasagar-lab/AskDB-AI-Assistant-for-database-"
+problem: "Letting a language model write SQL against a real database is the easy part. Guaranteeing that what it wrote cannot delete anything, cannot read the filesystem, and cannot run for an hour is the whole job."
+shots: []
+outcomes:
+  - metric: "10"
+    label: "nodes in the query graph"
+  - metric: "2"
+    label: "independent read-only defences"
+  - metric: "137"
+    label: "tests across a three-job CI"
+featured: true
+order: 3
+---
+
+import Diagram from '../../components/Diagram.astro';
+
+AskDB puts a chat box in front of a PostgreSQL database. You ask a question in English; it
+picks the relevant tables, writes SQL, checks the SQL against the schema, runs it inside a
+transaction the server itself refuses to let write, checks the results actually answer what was
+asked, and replies in a sentence with the table underneath.
+
+The interesting work is not the text-to-SQL. It is everything wrapped around it.
+
+## The pipeline
+
+Ten nodes in a LangGraph `StateGraph`, and unlike a straight pipeline this one has real
+routing — conditional edges, and two loops that can send work backwards.
+
+<Diagram
+  label="Ten-node pipeline. rewrite_question flows into select_tables, fetch_schema, generate_sql and validate_sql. validate_sql passes to execute_sql, which is the only node that touches the database and runs inside a read-only transaction. execute_sql branches three ways: on error to fix_sql, which loops back to validate_sql so the repair is re-checked; on exhausted attempts to fail; and otherwise to validate_result, which either retries execute_sql or continues to summarise. summarise and fail both end the run."
+  caption="Solid edges run forward; the two dashed edges are the loops that send work back."
+>
+<svg viewBox="0 0 770 700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ad-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+    <marker id="ad-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+    </marker>
+    <marker id="ad-arrow-fail" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="color-mix(in srgb, #E5534B 60%, var(--line-strong))" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#ad-arrow)">
+    <path d="M380,60 V90" />
+    <path d="M380,132 V162" />
+    <path d="M380,204 V234" />
+    <path d="M380,276 V306" />
+    <path d="M380,348 V392" />
+    <path d="M380,434 V478" />
+    <path d="M380,520 V564" />
+    <path d="M380,606 V636" />
+    <path d="M470,413 H555" />
+    <path d="M153,520 V652 H340" />
+  </g>
+
+  {/* The give-up edge, in the same red as the node it leads to. */}
+  <path d="M290,400 H153 V478" fill="none" stroke="color-mix(in srgb, #E5534B 60%, var(--line-strong))"
+    stroke-width="1.4" marker-end="url(#ad-arrow-fail)" />
+
+  {/* The two loops. Dashed so a reader can see at a glance which edges go back.
+      The retry turns at x=250 to clear the fail box, which ends at x=228 — at
+      x=215 the edge ran straight through it. */}
+  <g fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"
+    marker-end="url(#ad-arrow-accent)">
+    <path d="M635,392 V327 H474" />
+    <path d="M290,499 H250 V425 H286" />
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="13" fill="var(--ink)" text-anchor="middle">
+    {/* Colour encodes what a node does, so the four kinds of work are legible
+        before any label is read. Fills are mixed into --surface rather than set
+        flat, so every one of them holds on both the light and dark ground. */}
+
+    {/* Understanding the question — blue */}
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="290" y="18"  width="180" height="42" rx="9" />
+      <rect x="290" y="90"  width="180" height="42" rx="9" />
+      <rect x="290" y="162" width="180" height="42" rx="9" />
+    </g>
+
+    {/* Writing SQL — violet */}
+    <g fill="color-mix(in srgb, #8B7CF6 14%, var(--surface))"
+      stroke="color-mix(in srgb, #8B7CF6 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="290" y="234" width="180" height="42" rx="9" />
+      <rect x="555" y="392" width="160" height="42" rx="9" />
+    </g>
+
+    {/* Checking it — teal */}
+    <g fill="color-mix(in srgb, #2DB4A0 14%, var(--surface))"
+      stroke="color-mix(in srgb, #2DB4A0 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="290" y="306" width="180" height="42" rx="9" />
+      <rect x="290" y="478" width="180" height="42" rx="9" />
+    </g>
+
+    {/* Outcomes — green for the answer, red for giving up */}
+    <rect x="290" y="564" width="180" height="42" rx="9"
+      fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3" />
+    <rect x="78" y="478" width="150" height="42" rx="9"
+      fill="color-mix(in srgb, #E5534B 13%, var(--surface))"
+      stroke="color-mix(in srgb, #E5534B 55%, var(--line-strong))" stroke-width="1.3" />
+
+    {/* The only node that reaches the database. Heavier, because it is the one
+        wrapped in the read-only transaction. */}
+    <rect x="290" y="392" width="180" height="42" rx="9"
+      fill="color-mix(in srgb, var(--accent) 16%, var(--surface))"
+      stroke="var(--accent)" stroke-width="2" />
+
+    <rect x="340" y="636" width="80" height="32" rx="16"
+      fill="none" stroke="var(--line-strong)" stroke-width="1.2" />
+
+    <text x="380" y="45">rewrite_question</text>
+    <text x="380" y="117">select_tables</text>
+    <text x="380" y="189">fetch_schema</text>
+    <text x="380" y="261">generate_sql</text>
+    <text x="380" y="333">validate_sql</text>
+    <text x="380" y="419" fill="var(--accent)">execute_sql</text>
+    <text x="380" y="505">validate_result</text>
+    <text x="380" y="591">summarise</text>
+    <text x="635" y="419">fix_sql</text>
+    <text x="153" y="505">fail</text>
+    <text x="380" y="657" font-size="11" fill="var(--ink-3)">END</text>
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="10.5" fill="var(--ink-3)" text-anchor="middle">
+    <text x="512" y="406">error</text>
+    <text x="212" y="392" fill="color-mix(in srgb, #E5534B 70%, var(--ink-3))">attempts spent</text>
+    <text x="268" y="417" text-anchor="start" fill="var(--accent)">retry</text>
+    <text x="545" y="318" fill="var(--accent)">re-validated</text>
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="10" fill="var(--ink-3)" text-anchor="start">
+    <text x="392" y="374">valid</text>
+    <text x="392" y="460">rows</text>
+    <text x="392" y="546">answers it</text>
+  </g>
+</svg>
+</Diagram>
+
+**Follow-up rewriting** comes first. "How many of those were last month?" means nothing on its
+own, so with conversation history present the question is rewritten into a standalone one
+before anything else sees it.
+
+**Table selection, then schema.** The model is shown a summary of the whole database and asked
+which tables it needs. Only those tables are then described in full for SQL generation.
+
+**Validation before execution.** A grounding check compares the generated SQL against the
+scoped schema. If it fails, the query goes to a repair node — and the repair edge points back
+to `validate_sql`, not to `execute_sql`:
+
+```python
+graph.add_edge("fix_sql", "validate_sql")
+```
+
+That edge is deliberate. A repaired query used to be trusted and run directly; now a fix has to
+pass the same check the original failed. The state flag says so too — `sql_valid` stays `False`
+after a repair "so the repair is re-checked rather than trusted".
+
+**Result validation.** After execution the rows are checked against the original question. An
+empty result for "how many orders in June" is a legitimate answer; an empty result because the
+query joined the wrong key is not, and the difference is worth one more model call.
+
+## Making the schema fit
+
+A database with thirty tables does not fit in a prompt, and pasting all of it would bury the
+three tables that matter. So the schema is built twice, at two different resolutions.
+
+The **summary** covers every table and is used only to choose which ones are relevant. It
+includes something most schema dumps leave out: for boolean and enum-like columns — anything
+named `status`, `type`, `category`, `severity`, `role`, `gender` — it samples up to ten distinct
+values from the live data and puts them in the description.
+
+That detail removes a whole class of silently-wrong answers. A model that cannot see the values
+guesses `WHERE status = 'Active'` when the column actually contains `active`, and gets a
+confident, empty, wrong result.
+
+The **scoped schema** then describes only the chosen tables — columns with types, nullability
+and defaults, primary keys, foreign key targets, unique constraints and an approximate row
+count — and skips the value sampling, which has already done its job.
+
+Identifiers are quoted through SQLAlchemy's dialect preparer rather than string-formatted, so
+a mixed-case or reserved-word table name does not break introspection.
+
+## Two defences, and which one is real
+
+This is the part I would defend hardest, and the honesty of it matters more than the cleverness.
+
+**The first defence is a static check.** Generated SQL is parsed with `sqlparse` and rejected
+unless it is a single read-only statement. Comments are stripped first, so nothing hides inside
+them. There must be exactly one statement, which kills `SELECT 1; DROP TABLE users`. Forbidden
+keywords are matched against the parsed token stream — including `INTO`, because `SELECT ...
+INTO new_table` writes a relation — and a list of forbidden functions blocks the routes out of
+the database entirely: `pg_read_file`, `lo_import`, `lo_export`, `dblink`, `pg_terminate_backend`,
+`query_to_xml`, and `pg_sleep`, which is not a data risk but a denial-of-service one.
+
+The keyword check runs against **token types, not raw text**, and the reason is written into the
+code:
+
+```python
+"""Only real keyword and name tokens are examined. Scanning the raw text
+instead would reject perfectly safe queries whose *string literals* happen
+to contain a keyword, for example::
+
+    SELECT 'cannot delete this row' AS note FROM t
+    SELECT count(*) FROM orders WHERE status = 'deleted'
+"""
+```
+
+**The second defence is the one that actually guarantees anything.** Every query runs inside a
+connection that has been told, by PostgreSQL, that it may not write:
+
+```python
+conn.execute(text("SET TRANSACTION READ ONLY"))
+yield conn
+```
+
+The transaction is always rolled back — a read-only transaction has nothing worth committing.
+
+The module docstring states the relationship between the two plainly: *a parser can always be
+fooled, a server-side `SET TRANSACTION READ ONLY` cannot.* The static check exists so that
+unsafe SQL is refused early with a message a person can read, not because it is the guarantee.
+
+Writing that down is the point. A safety layer you believe is the guarantee, when it is really
+the convenience, is how systems get trusted further than they should be.
+
+## Refusing a query before running it
+
+A syntactically perfect query can still be ruinous. Before execution, the planner is asked what
+it would cost:
+
+```python
+plan = conn.execute(text(f"EXPLAIN (FORMAT JSON) {sql}")).scalar()
+```
+
+Plain `EXPLAIN` plans without executing, so the estimate is free. If the total cost exceeds the
+configured ceiling the query is refused with the number in the message, rather than discovered
+by a timeout thirty seconds later. That `EXPLAIN` runs inside a read-only transaction too.
+
+Three more limits sit underneath. Results are capped by wrapping the query in a subquery —
+correct for set operations and `ORDER BY`, where appending `LIMIT` is not. A `statement_timeout`
+is set in the connection options, so PostgreSQL kills a runaway query even if the client
+disappears. And one shared engine with a bounded pool serves the whole process; the agent used
+to build a fresh engine per request and never dispose of it.
+
+## Personal data
+
+The database this points at may hold real people. The PII layer has three modes, and the
+docstring is candid about what each one does:
+
+- **`off`** — no processing.
+- **`trace`**, the default — PII is encrypted in Langfuse traces only. **The model still sees
+  clear text.** The docstring notes this is what the app already did "while its README claimed
+  otherwise" — a gap between documentation and behaviour, found and then written down rather
+  than quietly closed.
+- **`strict`** — PII is additionally replaced with type placeholders before any model call.
+
+Detection and anonymisation run on Microsoft Presidio. Trace encryption is reversible AES, so
+whoever holds the key can decrypt a trace during debugging; redaction for the model deliberately
+is not.
+
+The choice of placeholder over ciphertext is reasoned:
+
+> Placeholders (`<PERSON>`) are used rather than ciphertext deliberately: an AES blob in the
+> prompt destroys the model's ability to reason about the sentence at all, whereas a typed
+> placeholder keeps the structure intact.
+
+And the cost of `strict` is stated instead of hidden: the model can no longer filter or group by
+a real name, so questions naming a specific person answer less precisely. Inherent, and not a
+bug.
+
+## Errors that do not leak the password
+
+Raw exception text used to be rendered into the page. SQLAlchemy and psycopg2 errors embed the
+connection URI — which contains the database password.
+
+Every error now passes through a translator that maps exception types to sentences written for
+a person: the database is unreachable, the connection was lost, the query took too long and was
+cancelled, the model is rate limited. Content-filter rejections get their own message, since a
+generic `BadRequestError` tells the user nothing about what to do next.
+
+Access control is opt-in but correct where it counts: a shared token compared with
+`secrets.compare_digest`, because a plain `!=` leaks the token byte by byte through timing. When
+no token is configured the app is open, and startup says so loudly.
+
+## Cost, and telling the user what is happening
+
+A cache miss costs **five sequential model calls**, so identical questions are served from a
+small thread-safe TTL cache. The default expiry is short because the underlying data changes
+underneath it, and follow-up questions carrying conversation context are never cached at all —
+their meaning depends on the conversation, so the question text alone is not a valid key.
+
+Because five model calls take real time, each node publishes its stage to a per-request channel
+that the UI streams over server-sent events. The request id travels in the graph state rather
+than a `ContextVar`, which keeps it correct no matter how LangGraph schedules the nodes.
+
+The interface is server-rendered Jinja with HTMX — no SPA, no build step at runtime.
+
+## Tests and CI
+
+137 tests, and a CI with three jobs rather than one.
+
+The **test job** runs ruff lint, a formatting check, mypy and the suite with coverage. Tests
+needing a live PostgreSQL and a live model are marked and deselected, so the default run needs
+no external service.
+
+The **CSS job** rebuilds the Tailwind stylesheet and then does this:
+
+```yaml
+- name: Fail if the committed stylesheet is stale
+  run: git diff --exit-code app/static/app.css
+```
+
+The compiled stylesheet is committed on purpose, so the app runs without a Node toolchain. That
+is a build artifact in version control, which normally rots. This makes it impossible to rot.
+
+The **browser job** installs Chromium and drives the real UI with Playwright, failing on any
+console or CSP error — which catches what server-side tests cannot: a blocked event handler, a
+dead button, a colour combination nobody can read.
+
+There is also a test that asserts no tracked file begins with a UTF-8 BOM. It exists because one
+did: a BOM written into `pyproject.toml` by a Windows editor made the TOML parser reject the
+file outright and broke pytest, ruff and uv simultaneously.
+
+## The principle behind it
+
+Every interesting decision in this project was about where to put the boundary between the
+model and the database.
+
+The model chooses tables, writes SQL and explains results — all judgement. Whether that SQL may
+write, how long it may run, how much it may cost, how many rows it may return, and what a user
+sees when it fails are not judgement, and none of them are left to a prompt. They are a parser,
+a read-only transaction, a planner estimate, a subquery wrapper and a lookup table.
+
+The measure of a system like this is not whether it answers well when everything goes right.
+It is what it does when the model writes `DROP TABLE`.
