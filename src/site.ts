@@ -12,8 +12,8 @@ export const site = {
     'Four years building multi-agent systems and fine-tuned language models for enterprise quality engineering — including small language models deployed on customers’ own secured hardware, where calling a hosted API was never an option.',
   location: 'India',
   email: 'vidhyasagar54321@gmail.com',
-  github: 'https://github.com/vidhyasagar-lab', // TODO: confirm
-  linkedin: 'https://linkedin.com/in/', // TODO: needed — not in the resume
+  github: 'https://github.com/vidhyasagar-lab',
+  linkedin: 'https://www.linkedin.com/in/kokirala-vidhyasagar',
   status: 'Open to AI engineering roles',
 } as const;
 
