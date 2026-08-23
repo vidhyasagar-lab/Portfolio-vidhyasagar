@@ -1,0 +1,521 @@
+---
+title: "Multimodal RAG"
+tagline: "A document chatbot that reads the pictures too — flowcharts, tables and architecture diagrams are described by a vision model, indexed as text, and retrieved alongside the prose. Every answer is scored before it reaches the screen."
+role: "Sole engineer — ingestion, retrieval, eval gating, auth, security audit"
+period: "2026"
+stack: ["Python", "FastAPI", "Azure OpenAI", "FAISS", "BM25", "RAGAS", "Langfuse", "LangChain", "PyMuPDF", "HTMX", "SQLite"]
+# Points straight at the repo. Note it is currently private, so a visitor
+# without access lands on GitHub's 404 — make the repo public for this link to
+# resolve for anyone.
+repo: "https://github.com/vidhyasagar-lab/RAG_Chatbot"
+problem: "Most RAG systems throw away everything that is not a paragraph. The flowchart that actually explains the process gets dropped on the floor, and nobody notices, because the system answers confidently anyway."
+shots: []
+outcomes:
+  - metric: "6"
+    label: "content types indexed, not just text"
+  - metric: "3"
+    label: "RAGAS metrics on every answer"
+  - metric: "40"
+    label: "tests across four suites"
+featured: true
+order: 4
+---
+
+import Diagram from '../../components/Diagram.astro';
+
+Upload a PDF and ask questions about it. That sentence describes a hundred weekend projects,
+and almost all of them are doing the same thing underneath: extract the text, chunk it, embed
+it, cosine-similarity it, hand the top five to a model.
+
+The trouble is that business documents are not text. They are text *plus* the flowchart that
+explains the process, the table with the actual numbers in it, and the architecture diagram
+that the surrounding paragraph refers to as "the diagram above". A text-only pipeline silently
+discards all of that and then answers your question anyway, fluently, from the half of the
+document it could read.
+
+This project is about the other half — and about not trusting the answer once you have it.
+
+## Six kinds of content, one index
+
+Before anything is chunked, a document goes through a preprocessor that pulls apart everything
+inside it. A PDF gets opened with PyMuPDF and, page by page, gives up four different things:
+its text, its embedded raster images, any page that looks like it holds a table, and any page
+that is drawing-heavy enough to probably *be* a diagram.
+
+That last heuristic is deliberately crude and I would rather it be crude than clever:
+
+```python
+drawings = page.get_drawings()
+text_ratio = len(page_text.strip()) / max(len(drawings), 1)
+is_visual_page = len(drawings) > 15 and text_ratio < 50
+```
+
+Lots of vector drawing operations, not much text per operation. That is what a flowchart looks
+like from the outside. Past that gate it is refined by a second guess — more than thirty
+drawings reads as a flowchart, fewer as a diagram — and the page is rendered to a PNG at 200
+DPI.
+
+Each extracted visual is then classified from the words around it into one of five kinds, and
+each kind gets its **own vision prompt**. This matters more than it sounds. Asking "describe
+this image" of a flowchart gets you a paragraph about boxes and arrows. Asking the flowchart
+question gets you something retrievable:
+
+```
+- List every step/node with its label
+- Describe the flow direction and all connections/arrows between nodes
+- Note any decision points (yes/no branches)
+- Describe conditions, loops, and parallel paths
+```
+
+The description is what gets embedded. A user asking "what happens if the approval fails?"
+is matching against a transcription of the branch labels in a diagram, not against a caption.
+
+DOCX takes a different route, because it does not need vision for everything: tables come out
+natively cell-by-cell and are converted straight to Markdown, and SmartArt is found by walking
+the relationship graph for `diagram` and `chart` relationship types and pulling out the
+fallback image Word stores alongside them.
+
+## Describing images without stalling the upload
+
+A vision call costs one to two seconds of waiting on Azure. Done inline at each extraction
+site, a twenty-image document serialises into twenty round trips and an upload that takes most
+of a minute.
+
+So no extraction site calls the vision model. Each one appends a **placeholder** record and
+registers the work:
+
+```python
+result.visual_elements.append(VisualElement(content_type=..., description="", ...))
+result.text_docs.append(Document(page_content="", metadata=metadata))
+pending.append(_PendingVisual(
+    image_path=image_path, prompt=prompt, fallback=fallback, header=header,
+    element_index=len(result.visual_elements) - 1,
+    doc_index=len(result.text_docs) - 1,
+))
+```
+
+Once every image is on disk, the whole batch goes to a thread pool at six concurrent calls,
+and the placeholders are patched in place. Because each pending record carries the *index* it
+must write back to, output ordering is identical to what serial processing would have produced
+— the parallelism is invisible from the outside, which is the only kind worth having.
+
+Failures are captured per job rather than raised. One unreadable image falls back to a
+bracketed label and the other nineteen still get described; a single corrupt embedded PNG
+cannot abandon the document. A thread pool rather than `asyncio` because the preprocessing
+path is synchronous and gets called from both sync and async code — introducing an event loop
+requirement there would have leaked upward through the whole ingestion stack.
+
+<Diagram
+  label="Ingestion pipeline. A document is extracted into text and visual elements, then every visual is described by the vision model six at a time with ordering preserved. The result is cleaned, split by headings and by semantic similarity, capped at 512 tokens into parent chunks, then split again into 128-token children and deduplicated. Children go into both the FAISS dense index and the BM25 sparse index, while parent chunks and image records go into their own stores. All four are persisted together as an index plus a sidecar file."
+  caption="The three stores fan out from one write path and are saved together — separating those two steps is what caused the bug below."
+>
+<svg viewBox="0 0 720 550" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ri-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+  </defs>
+
+  {/* Trunk and the fan bars carry no marker — only the segments that actually
+      arrive at a box get an arrowhead, or the diagram grows spurious ones. */}
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4">
+    <path d="M360,370 V386" />
+    <path d="M120,386 H600" />
+    <path d="M120,448 V468" />
+    <path d="M360,448 V468" />
+    <path d="M600,448 V468" />
+    <path d="M120,468 H600" />
+  </g>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#ri-arrow)">
+    <path d="M360,58 V92" />
+    <path d="M360,136 V170" />
+    <path d="M360,214 V248" />
+    <path d="M360,292 V326" />
+    <path d="M120,386 V404" />
+    <path d="M360,386 V404" />
+    <path d="M600,386 V404" />
+    <path d="M360,468 V486" />
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="13" fill="var(--ink)" text-anchor="middle">
+    {/* Blue reads, violet writes, teal holds what the others need later,
+        green is what survives a restart. Fills mix into --surface so every
+        one of them holds on both the light and the dark ground. */}
+
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="230" y="14"  width="260" height="44" rx="9" />
+      <rect x="230" y="170" width="260" height="44" rx="9" />
+      <rect x="20"  y="404" width="200" height="44" rx="9" />
+      <rect x="260" y="404" width="200" height="44" rx="9" />
+    </g>
+
+    <g fill="color-mix(in srgb, #8B7CF6 14%, var(--surface))"
+      stroke="color-mix(in srgb, #8B7CF6 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="230" y="92"  width="260" height="44" rx="9" />
+      <rect x="230" y="248" width="260" height="44" rx="9" />
+      <rect x="230" y="326" width="260" height="44" rx="9" />
+    </g>
+
+    <rect x="500" y="404" width="200" height="44" rx="9"
+      fill="color-mix(in srgb, #2DB4A0 14%, var(--surface))"
+      stroke="color-mix(in srgb, #2DB4A0 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <rect x="230" y="486" width="260" height="44" rx="9"
+      fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <text x="360" y="42">extract text + visuals</text>
+    <text x="360" y="120">describe each visual</text>
+    <text x="360" y="198">clean · headings · semantic</text>
+    <text x="360" y="276">cap 512 tokens → parents</text>
+    <text x="360" y="354">128-token children · dedup</text>
+    <text x="120" y="432">FAISS · dense</text>
+    <text x="360" y="432">BM25 · sparse</text>
+    <text x="600" y="432">parents + images</text>
+    <text x="360" y="514">save index + sidecar</text>
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="10.5" fill="var(--ink-3)" text-anchor="start">
+    <text x="506" y="110">6 at a time,</text>
+    <text x="506" y="126">order preserved</text>
+  </g>
+</svg>
+</Diagram>
+
+## Chunking, in eight steps
+
+Once everything is text — including the text that used to be a picture — it goes through a
+chunking pipeline that is deliberately more than a `RecursiveCharacterTextSplitter`.
+
+Clean the whitespace. Split on Markdown headings so a section is never torn in half, keeping a
+`h1 > h2 > h3` breadcrumb in the metadata. Split again *semantically*, using embedding cosine
+distance at the 85th percentile to find where the topic actually turns. Cap the result at 512
+tokens with `tiktoken` — these are the **parent** chunks. Prepend the document name and the
+section breadcrumb to each one so it can stand alone. Split the header-enriched parents down
+to 128 tokens — these are the **children**, and these are what get embedded. Finally, drop any
+child whose token set overlaps an already-seen child by more than 90%.
+
+Small chunks retrieve precisely; large chunks give the model something to reason with. So both
+are kept, children carry a `parent_id`, and retrieval swaps one for the other at the last
+moment.
+
+## Retrieval is two searches, not one
+
+Every query runs twice: dense similarity through FAISS, and BM25 keyword scoring through a
+hand-written Okapi index. Both over-fetch three times the requested `k`, and the two ranked
+lists are merged by Reciprocal Rank Fusion:
+
+```
+score(d) = Σ  weight_i / (60 + rank_i(d))
+```
+
+RRF is the right tool here because it never compares the two scores directly. A cosine
+similarity and a BM25 score are not on the same scale and no amount of normalisation makes
+them comparable; what *is* comparable is "third in one list and second in the other". Anything
+both retrievers like rises.
+
+Dense retrieval alone fails on exactly the queries users actually type — product codes, error
+numbers, an acronym that appears in four documents. Sparse alone fails on paraphrase. Together
+they cover for each other.
+
+Then, and only then, each surviving child is swapped for its parent. The system retrieves at
+128-token precision and reasons at 512-token breadth.
+
+## The bug that hid behind a clean startup
+
+FAISS persists to disk. Everything else in that paragraph did not.
+
+Parent chunks lived in a module-level dict. Image records lived in another one. The BM25
+corpus lived inside an object constructed at import. On restart, FAISS loaded perfectly, the
+logs said `faiss_store_loaded`, the app served traffic — and the sparse half of hybrid
+retrieval returned nothing at all, because its corpus was empty. Parent expansion quietly
+stopped happening too. Every answer still came back, slightly worse, with nothing anywhere
+saying so.
+
+That is the worst shape a bug can have: **degrades, does not fail.** A crash would have been
+found in a minute.
+
+The fix is a sidecar file written next to the FAISS index holding the parent store, the image
+records, and the BM25 corpus. Three details in it are worth more than the file itself:
+
+**The index is not saved, only the corpus.** BM25's term statistics are derived from the
+documents, so persisting them would just be a second copy of the truth that could drift from
+the first. It is rebuilt on load.
+
+**The write is atomic.** Temp file, then rename — a crash mid-write cannot leave a truncated
+sidecar where a valid one used to be.
+
+**An index older than the sidecar still recovers.** FAISS keeps the full child documents in
+its docstore, so when no sidecar is found the BM25 index is rebuilt from those and written out
+for next time. Without that, hybrid retrieval would stay dense-only until every document was
+re-uploaded, and nobody would have known to do it.
+
+Five tests hold this down, and the one I care about most is the ugly case:
+
+```python
+def test_corrupt_sidecar_does_not_crash_startup(store):
+    store._state_path().write_bytes(b"this is not a pickle")
+    vs = _reload_store()
+    vs.get_vector_store()          # must not raise
+    assert len(vs._bm25.docs) == 0, "corrupt sidecar should degrade to empty, not crash"
+```
+
+A corrupt sidecar should cost you retrieval quality, not the ability to start the process.
+
+## Checking the answer before showing it
+
+The part I would keep if I had to throw the rest away.
+
+RAG's failure mode is not returning nothing. It is returning something plausible that the
+retrieved context does not actually support. So before the answer reaches the browser, it is
+scored against its own context — and if it fails, it is thrown away and rewritten.
+
+The gate metric is RAGAS **faithfulness**: decompose the answer into claims, check each claim
+against the retrieved chunks, report the fraction supported. Below the configured threshold,
+the answer is regenerated with a stricter system prompt and a slightly colder temperature.
+
+<Diagram
+  label="Eval-gated query path. A question goes to hybrid search, which runs dense and sparse retrieval and fuses them. Answer generation and the context precision metric then run concurrently in a single asyncio gather, because context precision does not need the answer. The generated answer goes through a faithfulness gate: at or above the threshold it is sent as generated, below it the answer is regenerated with a stricter prompt, re-checked, and whichever version scored higher is the one sent. After the answer is sent, the full three-metric RAGAS evaluation runs in a background thread and pushes its scores to Langfuse."
+  caption="The dashed bracket is one asyncio.gather: the quality check of the retrieved context costs no wall-clock time at all."
+>
+<svg viewBox="0 0 760 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="rq-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#rq-arrow)">
+    <path d="M380,56 V86" />
+    <path d="M380,128 V150 H195 V170" />
+    <path d="M380,128 V150 H565 V170" />
+    <path d="M195,212 V254 H360 V274" />
+    <path d="M565,212 V254 H400 V274" />
+    <path d="M380,316 V452" />
+    <path d="M480,295 H625 V356" />
+    <path d="M625,398 V473 H480" />
+  </g>
+
+  {/* Background work, dashed: the user already has their answer by now. */}
+  <path d="M380,494 V536" fill="none" stroke="var(--line-strong)" stroke-width="1.4"
+    stroke-dasharray="5 4" marker-end="url(#rq-arrow)" />
+
+  {/* The superstep bracket. Both boxes inside it start together. */}
+  <rect x="86" y="156" width="588" height="70" rx="12" fill="none"
+    stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="5 4" />
+
+  <g font-family="var(--f-mono)" font-size="13" fill="var(--ink)" text-anchor="middle">
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="290" y="14" width="180" height="42" rx="9" />
+      <rect x="290" y="86" width="180" height="42" rx="9" />
+    </g>
+
+    <g fill="color-mix(in srgb, #8B7CF6 14%, var(--surface))"
+      stroke="color-mix(in srgb, #8B7CF6 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="100" y="170" width="190" height="42" rx="9" />
+      <rect x="530" y="356" width="190" height="42" rx="9" />
+    </g>
+
+    <g fill="color-mix(in srgb, #2DB4A0 14%, var(--surface))"
+      stroke="color-mix(in srgb, #2DB4A0 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="470" y="170" width="190" height="42" rx="9" />
+      <rect x="250" y="536" width="260" height="42" rx="9" />
+    </g>
+
+    {/* The gate. Heavier, in the accent, because it is the one node that can
+        reject work the rest of the pipeline already paid for. */}
+    <rect x="280" y="274" width="200" height="42" rx="9"
+      fill="color-mix(in srgb, var(--accent) 16%, var(--surface))"
+      stroke="var(--accent)" stroke-width="2" />
+
+    <rect x="280" y="452" width="200" height="42" rx="9"
+      fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <text x="380" y="41">question</text>
+    <text x="380" y="113">hybrid_search</text>
+    <text x="195" y="197">generate answer</text>
+    <text x="565" y="197">context_precision</text>
+    <text x="380" y="301" fill="var(--accent)">faithfulness gate</text>
+    <text x="625" y="383">regenerate, stricter</text>
+    <text x="380" y="479">send to the browser</text>
+    <text x="380" y="563">RAGAS ×3 → Langfuse</text>
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="10.5" fill="var(--ink-3)">
+    <text x="380" y="244" text-anchor="middle" fill="var(--accent)">one asyncio.gather — precision needs no answer</text>
+    <text x="392" y="344" text-anchor="start">≥ threshold</text>
+    <text x="516" y="288" text-anchor="middle">below</text>
+    <text x="616" y="440" text-anchor="end">re-checked; better score wins</text>
+    <text x="392" y="522" text-anchor="start">background thread</text>
+  </g>
+</svg>
+</Diagram>
+
+Two decisions inside that gate are the ones I would defend in a review.
+
+**Context precision runs for free.** It scores whether the retrieved chunks were relevant to
+the question — which means it needs the question and the contexts, and *not* the answer. So it
+does not have to wait for generation:
+
+```python
+gen_task = asyncio.ensure_future(_async_generate_answer(async_client, messages, settings))
+ctx_prec_task = asyncio.ensure_future(
+    asyncio.to_thread(evaluate_context_precision_sync, question, context_chunks)
+)
+(answer, usage), context_precision = await asyncio.gather(gen_task, ctx_prec_task)
+```
+
+An entire quality metric, computed at zero wall-clock cost, because it was scheduled against
+the one operation already known to be slow. Finding the metric whose dependencies let it start
+early is most of what "optimising" a pipeline like this means.
+
+**A failed retry does not force the worse answer through.** The regenerated answer is scored
+too, and kept if it passed *or* if it simply scored higher than the original:
+
+```python
+if regen_passed or (regen_faith is not None and faithfulness is not None
+                    and regen_faith > faithfulness):
+    final_answer = regen_answer
+```
+
+The subtlety is the second branch. If the first answer scored 0.4 and the rewrite scores 0.45,
+neither passes — but 0.45 is still the better answer, and discarding it to serve 0.4 would
+mean the retry actively made things worse. A gate that can regress is worse than no gate.
+
+The scores are streamed to the browser as their own SSE event, so the interface can show what
+the gate decided rather than hiding it.
+
+## What eval gating costs
+
+It costs real streaming, and I want to be plain about that rather than let the SSE events
+imply otherwise.
+
+You cannot score an answer you have not finished generating, and you cannot un-say a token you
+have already sent. So the gated path generates the whole answer, scores it, possibly replaces
+it entirely, and only then replays the final text to the browser:
+
+```python
+chunk_size = 4  # characters per token event
+for i in range(0, len(final_answer), chunk_size):
+    yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
+```
+
+That is a typewriter animation, not a stream. The time to *first* token is worse than plain
+streaming by the length of a full generation plus a faithfulness call — and on a failed gate,
+plus a second generation and a second check.
+
+The trade is deliberate: an answer that arrives slower but has been checked beats an answer
+that starts arriving instantly and is wrong. But it *is* a trade, and `ask_stream` still exists
+alongside `ask_with_eval` for the genuinely streaming path with only background evaluation. A
+truly incremental gate would need claim-level checking as tokens arrive, which is a much larger
+piece of work.
+
+## Evaluation you can look at afterwards
+
+Every request is a Langfuse trace with named spans — retrieval, generation, the faithfulness
+gate — carrying token counts, model parameters, and the scores. When the background RAGAS run
+finishes, its three metrics are pushed back onto the *original* trace, so a trace that looked
+fine at request time acquires its quality scores a few seconds later, in place.
+
+There is also a golden dataset, and the part I like is where it comes from. On upload, a
+background thread takes the first few parent chunks of the new document and asks the model to
+write question-and-ground-truth pairs from them. The evaluation set grows as the corpus grows,
+without anyone sitting down to write test questions. A batch run then plays the whole golden
+set through the real pipeline and scores it on four metrics — the three per-query ones plus
+context recall, which needs the ground truth and so cannot run live.
+
+Repeated scoring is cached on `(question, contexts)`, because evaluating with an LLM costs the
+same as answering with one.
+
+## The audit
+
+I went through this codebase looking for what I had got wrong, gave every finding an ID, and
+wrote a regression test for each one. `tests/test_security.py` is that list, and it reads as
+the honest history of the project:
+
+**SEC-2** — a `POST /api/v1/users/login` that took a bare username and returned that user's ID
+and role. No password. The whole router is gone; the test asserts the route 404s and that no
+`/api/v1/users` path is in the OpenAPI schema at all.
+
+**SEC-4** — `documents/stats`, `chat/scores/{trace_id}` and `feedback` were all unauthenticated.
+Now every one requires a session, and `chat/scores` goes further: someone else's trace returns
+**204**, indistinguishable from "not scored yet", so the endpoint cannot be used to discover
+which trace IDs exist.
+
+**SEC-1** is the one worth reading twice. Rate limiting was registered and enforcing nothing.
+
+```
+slowapi resolves the matched route handler with _find_route_handler(app.routes, scope)
+and exempts the request when it cannot find one. Current FastAPI wraps included
+routers in an internal _IncludedRouter object that exposes no .endpoint, so every
+route registered via include_router — which is all of them — resolved to None and
+was silently skipped.
+```
+
+Adding the middleware and observing the app still work is not evidence it limits anything.
+The replacement is a small `BaseHTTPMiddleware` over the `limits` library that keys purely on
+the peer address and never introspects routes, so no framework internal changing shape can
+quietly disable it. The test asserts behaviour rather than registration — fire eight requests
+at a five-per-minute budget and demand a 429 — and a second one fires eight requests with
+eight different `X-Forwarded-For` values, because that header is client-controlled and
+honouring it would hand every client an unlimited budget.
+
+**HYG-6** — `SECRET_KEY` had an in-source default. A signing key in a public repository is a
+signing key every reader can forge session cookies with, so the field is now required with no
+default, a frozenset of known placeholders is rejected outright, and anything under sixteen
+characters fails. All three failures happen when `Settings` is constructed, which is before the
+first request is served.
+
+The rest: constant-time password comparison via `compare_digest` (asserted by reading the
+function's own source, so a future refactor back to `==` fails the suite), `/register` added to
+the API-key public paths because enabling a key had been silently breaking signup while login
+kept working, `/docs` and `/openapi.json` explicitly *not* public for the reverse reason, model
+output sanitised with DOMPurify before it reaches `innerHTML`, and every CDN script tag version-pinned.
+
+Around all of it: a CSP, `X-Frame-Options: DENY`, five-attempt login lockout on a five-minute
+window, uploads sanitised for path traversal on both separator styles and then re-checked with
+`is_relative_to` after resolution, and identity taken only from the signed cookie — `X-User-Id`
+is deliberately absent from the CORS allow-list, with a comment saying why.
+
+## What I would change
+
+**BM25 scoring is a full scan.** For each query term, `tokens.count(qt)` runs across every
+document in the corpus — `O(terms × docs × doc_length)`. At a few thousand chunks it is
+comfortably fast and the simplicity is worth it. At a hundred thousand it needs a real inverted
+index with posting lists.
+
+**Everything is single-process.** The parent store, the image store, the BM25 index and the
+rate limiter's `MemoryStorage` are all module-level state. Two workers behind a load balancer
+would each hold their own half-blind copy. Redis for the counters and a real vector service for
+the index is the honest next step, and it is a real rewrite rather than a config change.
+
+**The user filter runs after retrieval, not during it.** Both retrievers over-fetch `k × 3`
+globally and *then* drop documents belonging to other users. On a shared index with many users
+that over-fetch can be consumed entirely by other people's documents, and a user gets fewer
+chunks than they asked for. FAISS metadata pre-filtering would fix it properly.
+
+**The CSP still needs `'unsafe-inline'`**, because Tailwind's CDN build and HTMX both write
+inline styles. The comment above it says what the fix is — self-host the Tailwind build and go
+nonce-based — and until that is done the header is weaker than it looks.
+
+**`allow_dangerous_deserialization=True`** is required to load a FAISS index from disk. The
+pickle is one this app wrote, so the flag is accurate rather than reckless, but it does mean
+the data directory is trusted as code and should be treated with the permissions that implies.
+
+## The principle behind it
+
+Both halves of this project are the same idea, applied twice.
+
+The multimodal ingestion exists because a system that silently ignores a third of its input
+still answers confidently, and nobody can tell. The eval gate exists because a system that
+generates an unsupported claim also answers confidently, and nobody can tell either.
+
+The failure worth engineering against is not the error. It is the plausible answer that no
+signal anywhere marks as wrong — and the only defence is to build the signal yourself, then
+put it in front of the user.
