@@ -1,0 +1,447 @@
+---
+title: "AI News Digest"
+tagline: "A personal AI-news triage agent that runs itself every morning on GitHub Actions — clusters sixteen sources, scores what survives against a written profile of one reader, and refuses to fill the digest when nothing is worth reading."
+role: "Sole engineer — pipeline, prompt design, eval harness, cost control, scheduling"
+period: "2026"
+stack: ["Python", "OpenAI Responses API", "Azure OpenAI", "SQLite", "GitHub Actions", "Telegram Bot API", "Pydantic", "rapidfuzz", "uv"]
+# Points straight at the repo. Note it is currently private, so a visitor
+# without access lands on GitHub's 404 — make the repo public for this link to
+# resolve for anyone.
+repo: "https://github.com/vidhyasagar-lab/ai-news"
+problem: "An LLM will happily summarise all two thousand items you hand it, and bill you for the privilege. The engineering is in everything that decides what never reaches the model at all."
+shots: []
+outcomes:
+  - metric: "6"
+    label: "scheduled workflows in production"
+  - metric: "41%"
+    label: "of input tokens served from cache"
+  - metric: "4"
+    label: "gates that block a prompt change"
+featured: true
+order: 1
+---
+
+import Diagram from '../../components/Diagram.astro';
+
+The other systems here are things that *can* run. This one has been running — on a cron
+schedule, unattended, committing its own state back to its own repository every morning.
+
+The idea is unglamorous: read sixteen AI news sources, throw away almost everything, and send
+what is left to Telegram at 7am. What makes it worth writing about is that a language model is
+the most expensive component in the pipeline, and nearly every design decision is about keeping
+work away from it.
+
+## The cost funnel
+
+A naive version of this pipeline is four lines long: fetch everything, hand it to a model, ask
+for summaries, send them. It also costs roughly two dollars a day forever, and gets worse every
+time you add a source.
+
+So the real architecture is a funnel, and the interesting property is *where the paid step
+sits*:
+
+<Diagram
+  label="Daily pipeline as a cost funnel. Fetching pulls from sixteen sources. A keyword and age screen cuts roughly 2500 raw items to around 130. Clustering collapses the same story reported by several outlets. A registry pass drops anything already covered. A cheap arithmetic prefilter picks at most 40 items, capped at 8 per source. Only then does the LLM triage pass run, batched ten at a time behind a cached prompt prefix. Everything above the triage step is arithmetic with no API calls. After triage, final ranking and digest selection apply floors, mutes and a reading-time budget, and the result is written to the archive and sent to Telegram."
+  caption="The dashed line is the only place money is spent. Five stages run above it, all of them free."
+>
+<svg viewBox="0 0 760 650" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="nf-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#nf-arrow)">
+    <path d="M380,58 V92" />
+    <path d="M380,136 V170" />
+    <path d="M380,214 V248" />
+    <path d="M380,292 V326" />
+    <path d="M380,370 V414" />
+    <path d="M380,458 V492" />
+    <path d="M380,536 V570" />
+  </g>
+
+  {/* The free/paid boundary. Everything above it is arithmetic. */}
+  <path d="M60,392 H700" fill="none" stroke="var(--accent)" stroke-width="1.4"
+    stroke-dasharray="5 4" />
+
+  <g font-family="var(--f-mono)" font-size="13" fill="var(--ink)" text-anchor="middle">
+    {/* Blue is free work, accent is the one node that calls the model,
+        teal assembles, green ships. Fills mix into --surface so they hold
+        on both the light and the dark ground. */}
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="250" y="14"  width="260" height="44" rx="9" />
+      <rect x="250" y="92"  width="260" height="44" rx="9" />
+      <rect x="250" y="170" width="260" height="44" rx="9" />
+      <rect x="250" y="248" width="260" height="44" rx="9" />
+      <rect x="250" y="326" width="260" height="44" rx="9" />
+    </g>
+
+    <rect x="250" y="414" width="260" height="44" rx="9"
+      fill="color-mix(in srgb, var(--accent) 16%, var(--surface))"
+      stroke="var(--accent)" stroke-width="2" />
+
+    <rect x="250" y="492" width="260" height="44" rx="9"
+      fill="color-mix(in srgb, #2DB4A0 14%, var(--surface))"
+      stroke="color-mix(in srgb, #2DB4A0 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <rect x="250" y="570" width="260" height="44" rx="9"
+      fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <text x="380" y="42">fetch · 16 sources</text>
+    <text x="380" y="120">screen · age + keyword</text>
+    <text x="380" y="198">cluster · url, title, tf-idf</text>
+    <text x="380" y="276">registry · new vs repeat</text>
+    <text x="380" y="354">prefilter · proxy score</text>
+    <text x="380" y="442" fill="var(--accent)">triage · the LLM pass</text>
+    <text x="380" y="520">rank · floors · budget</text>
+    <text x="380" y="598">archive + telegram</text>
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="10.5" fill="var(--ink-3)" text-anchor="start">
+    <text x="524" y="120">~2500 → ~130</text>
+    <text x="524" y="198">one story, one entry</text>
+    <text x="524" y="354">≤ 40, max 8 per source</text>
+    <text x="524" y="436">batched 10 at a time,</text>
+    <text x="524" y="450">behind a cached prefix</text>
+    <text x="380" y="386" text-anchor="middle" fill="var(--accent)">everything above this line is arithmetic</text>
+  </g>
+</svg>
+</Diagram>
+
+Five stages run before a single token is billed. The screen alone does most of the work — a
+keyword-and-age gate that cuts roughly two and a half thousand raw items down to about a
+hundred and thirty.
+
+Its position matters as much as its existence. From the pipeline itself:
+
+```python
+# Order matters. Screening is a linear keyword/age gate, so running it
+# first shrinks 2500 raw items to ~130 before the quadratic clustering
+# pass and the O(n*stories) registry pass ever see them.
+items = cluster(screen(raw))
+```
+
+Run the cheap linear filter before the expensive quadratic one. Obvious written down; easy to
+get backwards when you are building the stages in the order you thought of them.
+
+## Clustering before paying, not after
+
+When four outlets cover the same launch, a naive pipeline pays to summarise it four times and
+then shows the reader four near-identical entries.
+
+Clustering runs *before* triage, in three passes cheapest-first: exact canonical URL, then
+fuzzy title match, then TF-IDF cosine over title and snippet. Collapsing them costs nothing and
+gains a real signal — an item that four sources independently thought was worth covering is
+more likely to matter, and `cluster_size` feeds into the ranking as evidence.
+
+The naive version of that comparison was too slow to ship:
+
+```python
+"""Blocking: only compare titles that share a reasonably rare token.
+
+Comparing every pair is O(n^2) and took minutes on a 2000-item run. Two
+articles about the same story always share at least one content word, so
+an inverted index over tokens finds every real duplicate while cutting
+the comparison count by orders of magnitude. Tokens appearing in more
+than MAX_BLOCK_SIZE titles carry no signal and are skipped.
+"""
+```
+
+That last sentence is the part I would point at in a review. Blocking on shared tokens is
+standard record linkage; the detail that makes it work here is discarding tokens that appear in
+more than sixty titles. "Model", "new" and "AI" are in half the corpus — blocking on them
+rebuilds the very all-pairs comparison you were trying to avoid.
+
+## Designing the prompt around the cache
+
+The triage pass is the only node that spends money, so it is built around the price list rather
+than around what reads nicely.
+
+Input tokens are billed at one tenth the price when they hit the prompt cache. That single fact
+determines the shape of the call: a long, fixed prefix carrying the reader profile, the scoring
+rubric and the calibration examples — then, always last, the only part that varies.
+
+```python
+"""Structured call.
+
+`cached_prefix` must be byte-identical across calls — it is the part
+OpenAI caches at 1/10th the input price. Anything that varies per
+call belongs in `variable_input`, which always goes last.
+"""
+```
+
+Items are batched ten per call, so that long prefix is paid for once per batch instead of once
+per item.
+
+Then the subtlety that took me longest to get right. The system learns from thumbs-up and
+thumbs-down votes by folding recent ratings into the prompt as extra calibration examples —
+which means the prefix would change *every single day*, and a prefix that changes is a prefix
+that never caches.
+
+So the calibration block is refreshed **weekly, not per run**, and stashed in a key-value table
+between refreshes:
+
+```python
+"""Recent thumbs up/down, rendered as extra calibration examples.
+
+Refreshed weekly so the cached prefix stays stable day to day.
+"""
+```
+
+Learning slower, on purpose, because learning faster would cost ten times as much for a
+difference no reader would notice. Across the runs recorded so far, **41% of input tokens came
+back as cache hits** — 8,704 of 20,995.
+
+## A circuit breaker in front of every call
+
+Output tokens are billed at $14 per million, and reasoning tokens count as output. The
+realistic failure mode is not a wrong answer; it is a loop that quietly bills for hours.
+
+So every call passes through a guard first, and it checks the *projected* spend rather than
+reacting after the fact:
+
+```python
+def _guard(self, projected_output: int) -> None:
+    today = usage_today()
+    if today["output_tokens"] + projected_output > self.max_output_tokens_today:
+        raise BudgetExceeded(...)
+    if today["cost"] >= self.max_cost_today:
+        raise BudgetExceeded(...)
+```
+
+Defaults are 60,000 output tokens and $1.50 a day. Blowing either raises `BudgetExceeded`, which
+the CLI catches and turns into a Telegram message rather than a stack trace in a log nobody
+reads. Every call's token counts and computed cost are written to a `usage` table, so "what did
+this cost" is a query rather than a guess.
+
+## The rubric, and giving the model permission to say no
+
+The scoring prompt is written for exactly one reader, and it asks one question:
+
+> "What would THIS reader miss if they skipped this?"
+>
+> Not "why is this generally interesting". Not "why does this matter to the industry". What
+> would *they* miss.
+
+Two rules in it do most of the work.
+
+**Every reason must name a concrete noun from the article** — a model name, a number, a
+library, a deprecation date. If the model cannot name one, it is required to mark the item
+skip. That single constraint is what separates *"Deprecates the `functions` parameter two of
+your services still use. Hard cutoff 31 March"* from *"an important development in the agent
+space"*.
+
+**Skipping is the expected outcome**, stated outright:
+
+> A typical batch is 40-60% skips. That is the system working correctly. Do not manufacture
+> reasons to fill the digest. An empty digest is a valid and useful outcome.
+
+Without that, a model asked to triage forty items will find forty reasons, because nothing in
+its training rewards returning an empty list. The stored verdicts bear it out: of the last forty
+scored, **twenty-five were skips**.
+
+The digest selection then applies the same restraint in code — a relevance floor, per-source
+caps, muted topics, and a reading-time budget. That budget is deliberately soft:
+
+```yaml
+# The time budget is a SOFT cap applied after min_items. A single 18-minute
+# arXiv paper must not be allowed to consume the whole allowance and leave
+# you with a one-item digest.
+min_items: 5
+max_read_minutes: 45
+```
+
+## Not tuning prompts by vibes
+
+This is the part I would keep if I had to throw the rest away, and it is the practice most
+missing from LLM projects I read.
+
+There is a golden set of hand-scored items and a harness that replays it through the live triage
+pass, then fails CI if quality regresses. Four gates:
+
+```python
+GATES = {
+    "score_mae_max": 1.8,
+    "skip_recall_min": 0.60,
+    "banned_phrases_max": 0,
+    "reason_no_noun_max": 2,
+}
+```
+
+Mean absolute error against my own scores, and recall on the items I marked as obvious skips —
+both standard. The other two are cheap proxies for slop, and I like them more:
+
+`banned_phrases` greps the model's output for "rapidly evolving", "game-changer", "highlights
+the growing importance of" and friends. `reason_no_noun` applies the rubric's own rule back to
+its output as a regex — a reason with no capitalised term, no number and no backticked
+identifier has almost certainly said nothing:
+
+```python
+_NOUN_HINT = re.compile(r"[A-Z][A-Za-z0-9.\-]{2,}|\d+(?:\.\d+)?%?|`[^`]+`")
+```
+
+Neither needs a judge model. Both catch the specific way this prompt fails.
+
+The workflow triggers on any change to the prompts, the profile, the scoring code or the evals,
+and exits non-zero on a failed gate, which blocks the pull request. Every verdict also stores a
+twelve-character hash of the prompt text plus the profile:
+
+```python
+"""Stable hash of the prompt text + profile, stored with every verdict.
+
+Without this you cannot attribute a quality change to a specific edit.
+"""
+```
+
+Scores in the database are therefore always attributable to the exact prompt that produced
+them.
+
+## The loop that closes
+
+Every item in the digest carries buttons. A thumb feeds the ranker, a bookmark saves it, a
+magnifier spends real reasoning effort on a full technical brief.
+
+<Diagram
+  label="The feedback loop. The digest is delivered to Telegram, where thumbs up and down are recorded as feedback rows. A poller running every six hours reads those votes, because Telegram only retains updates for twenty-four hours. The votes become calibration examples, which are refreshed once a week and stored in a key-value table, and that block forms part of the cached prompt prefix used by the next triage pass."
+  caption="Weekly refresh, not daily: a prefix that changed every run would never hit the prompt cache."
+>
+<svg viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="nl-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#nl-arrow)">
+    <path d="M360,58 V96" />
+    <path d="M360,140 V178" />
+    <path d="M360,222 V260" />
+  </g>
+
+  {/* The return edge, dashed and in the accent: this is the loop closing. */}
+  <path d="M250,282 H60 V36 H250" fill="none" stroke="var(--accent)" stroke-width="1.5"
+    stroke-dasharray="5 4" marker-end="url(#nl-arrow)" />
+
+  <g font-family="var(--f-mono)" font-size="13" fill="var(--ink)" text-anchor="middle">
+    <rect x="250" y="14" width="220" height="44" rx="9"
+      fill="color-mix(in srgb, var(--accent) 16%, var(--surface))"
+      stroke="var(--accent)" stroke-width="2" />
+
+    <g fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="250" y="96" width="220" height="44" rx="9" />
+    </g>
+
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="250" y="178" width="220" height="44" rx="9" />
+      <rect x="250" y="260" width="220" height="44" rx="9" />
+    </g>
+
+    <text x="360" y="42" fill="var(--accent)">cached prefix</text>
+    <text x="360" y="124">digest → telegram</text>
+    <text x="360" y="206">👍 / 👎 recorded</text>
+    <text x="360" y="288">calibration block</text>
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="10.5" fill="var(--ink-3)">
+    <text x="484" y="206" text-anchor="start">polled every 6h</text>
+    <text x="484" y="288" text-anchor="start">rebuilt weekly</text>
+    <text x="150" y="330" text-anchor="middle" fill="var(--accent)">stable between refreshes</text>
+    <text x="484" y="124" text-anchor="start">buttons: 👍 👎 🔖 🔍</text>
+  </g>
+</svg>
+</Diagram>
+
+The poller runs on its own six-hour schedule rather than alongside the digest, and the reason is
+in the module docstring:
+
+```python
+"""Telegram only retains updates for 24 hours via getUpdates, so this runs on
+its own schedule (every 6h) rather than once a day with the digest — a
+single failed run would otherwise lose feedback permanently.
+"""
+```
+
+One failed daily run would silently drop a day of feedback with nothing to indicate it had
+happened. Four chances a day makes that recoverable.
+
+## Running unattended
+
+Six workflows: the daily digest, a weekly rollup at high reasoning effort, the feedback poller,
+an hourly watchlist scan that makes no LLM calls at all, the eval gate, and the Pages publish.
+
+Three details are the difference between "it has a cron line" and "it actually runs":
+
+**The schedule is set in IST and fires early on purpose.**
+
+```yaml
+# Lands ~07:00 IST. Scheduled runs drift 10-30 min when Actions is busy,
+# so this fires at 06:45 to arrive on time rather than late. Avoiding
+# :00 also dodges the top-of-hour congestion spike.
+```
+
+**State is a SQLite file committed back to the repository**, guarded by a `concurrency` group so
+two runs can never interleave and produce a conflicted binary. Write-ahead logging is turned
+*off* for a reason most projects would never need:
+
+```python
+"""SQLite state store.
+
+... WAL is disabled deliberately so there is exactly one file to commit.
+"""
+```
+
+**The archive is written before delivery, not after.** If Telegram fails, the digest still
+exists on disk, and a delivery guard stops a re-run from double-sending what already went out.
+
+## Tests that stop the README lying
+
+Thirty-seven tests, and eight of them assert the documentation is true: every relative link
+resolves, every anchor exists, every documented `ainews` subcommand is real *and* every real one
+is documented, every referenced config file and script exists, and `.env.example` covers every
+setting the code actually reads.
+
+Including this one, which I wrote after finding a stale number in a different project's README:
+
+```python
+def test_claimed_test_count_is_accurate():
+    """The README quotes a test count; keep it honest."""
+```
+
+Documentation rots the moment code changes. These run with the normal suite, need no API calls,
+and fail CI like any other regression.
+
+## What I would change
+
+**The state store does not scale past one reader.** A committed SQLite file is exactly right for
+a single-user tool — it is diffable, backed up by git, and needs no infrastructure. It is also
+the reason this cannot become multi-user without being rewritten, and the repository grows a
+little every morning.
+
+**Feedback influence is coarse.** Votes become prose examples in a prompt. That is the cheapest
+thing that works, but it caps out: twenty examples is roughly the useful ceiling, and there is no
+way to weight recent votes above old ones without breaking prefix stability. A learned reranker
+over the stored features is the honest next step.
+
+**Clustering thresholds are hand-tuned constants.** An 85 fuzzy-title ratio and a 0.62 cosine
+were picked by looking at output. They work on today's sources; nothing tells me when a new feed
+makes them wrong, because unlike the triage prompt, clustering has no golden set.
+
+**The published archive is not live yet.** The Pages workflow is written and correct, but the
+repository is private, so the archive it deploys currently 404s.
+
+## The principle behind it
+
+The instinct with a capable model is to give it everything and let it sort things out. That
+instinct is what makes LLM systems expensive and vague at the same time.
+
+Every good decision in this project was a decision about restraint: filter before you pay,
+cluster before you summarise, cache the part that does not change, cap the spend before the
+call rather than after, tell the model that returning nothing is a correct answer — and put a
+gate in CI so none of it can quietly regress the next time I edit a prompt.
