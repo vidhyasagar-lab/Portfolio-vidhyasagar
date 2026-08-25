@@ -47,7 +47,9 @@ import { site, nav } from '../site';
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: .55rem .6rem .55rem 1rem;
+    /* The children now carry their own 44px height, so the bar keeps its
+       original proportions rather than growing by the difference. */
+    padding: .25rem .6rem .25rem 1rem;
     border-radius: 999px;
   }
 
@@ -55,6 +57,10 @@ import { site, nav } from '../site';
     display: flex;
     align-items: center;
     gap: .55rem;
+    /* A link's height is its text's height, and below 34rem the only child
+       left is an 8px dot — an 8px tap target. The min-height costs no
+       horizontal room, which is the scarce axis here. */
+    min-height: 44px;
     font-family: var(--f-display);
     font-weight: 700;
     font-size: .95rem;
@@ -72,7 +78,13 @@ import { site, nav } from '../site';
     flex: none;
   }
 
-  nav { margin-left: auto; }
+  /* `min-width: 0` lets the list shrink instead of forcing the pill wider
+     than the screen — a flex item's default min-width is auto, which is what
+     pushed the bar to 323px inside a 320px viewport. */
+  nav {
+    margin-left: auto;
+    min-width: 0;
+  }
 
   ul {
     display: flex;
@@ -81,15 +93,27 @@ import { site, nav } from '../site';
     list-style: none;
     margin: 0;
     padding: 0;
+    /* Last-resort valve. The links fit down to 320px, but a 280px folded
+       phone would still break the page layout; here it scrolls the strip
+       instead. Hidden scrollbar: the row is short enough to swipe. */
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
+  ul::-webkit-scrollbar { display: none; }
+
   ul a {
-    display: block;
+    display: flex;
+    align-items: center;
+    /* Vertical padding is what makes these a comfortable target; the pill is
+       already tall enough to hold 44px without growing. */
+    min-height: 44px;
     padding: .45rem .8rem;
     border-radius: 999px;
     font-size: .875rem;
     font-weight: 500;
     color: var(--glass-ink-2);
+    white-space: nowrap;
     transition: color .2s, background-color .2s;
   }
 
@@ -139,7 +163,17 @@ import { site, nav } from '../site';
 
   @media (max-width: 34rem) {
     .name { display: none; }
-    ul a { padding: .45rem .6rem; font-size: .82rem; }
+    .inner { gap: .4rem; padding-inline: .45rem; }
+    .mark { min-width: 36px; justify-content: center; }
+    ul a { padding: .45rem .5rem; font-size: .8rem; }
+  }
+
+  /* Below ~22rem the three labels plus the toggle genuinely do not fit, and
+     shrinking type further would only make them unreadable. The list scrolls
+     from here down; the page itself still does not. */
+  @media (max-width: 22rem) {
+    .inner { gap: .3rem; }
+    ul { gap: .1rem; }
   }
 </style>
 

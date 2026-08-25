@@ -167,6 +167,35 @@ const screens = [
   </article>
 </Base>
 
+<script>
+  /* Code blocks and tables scroll sideways on a narrow screen, but a plain
+     <pre> cannot be focused, so a keyboard user can never reach the half of a
+     line that is off-screen. MDX generates these, so the attribute has to be
+     added here rather than in the markup.
+
+     Only the ones that actually overflow get it — a focus stop on a block
+     that fits is a stop that does nothing, which is its own annoyance. */
+  function markScrollables() {
+    const blocks = document.querySelectorAll<HTMLElement>('.body pre, .body table');
+    blocks.forEach((el) => {
+      const scrolls = el.scrollWidth > el.clientWidth;
+      if (scrolls) {
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('role', 'region');
+        el.setAttribute('aria-label', el.tagName === 'PRE' ? 'Code block' : 'Table');
+      } else {
+        el.removeAttribute('tabindex');
+        el.removeAttribute('role');
+        el.removeAttribute('aria-label');
+      }
+    });
+  }
+
+  markScrollables();
+  // Rotating a phone changes which blocks overflow.
+  window.addEventListener('resize', markScrollables, { passive: true });
+</script>
+
 <style>
   /* --------- masthead --------- */
 
@@ -186,8 +215,17 @@ const screens = [
   }
 
   .back {
+    /* inline-flex + min-height rather than display:block: this sits above the
+       title, so it must not stretch the full column and swallow taps meant
+       for the heading. 18px of text was the smallest target on the page. */
+    display: inline-flex;
+    align-items: center;
+    /* A flex container drops the whitespace between its items, so the space
+       in "← All work" vanished when this stopped being inline. */
+    gap: .4rem;
+    min-height: 44px;
     color: var(--ink-3);
-    margin-bottom: 1.25rem;
+    margin-bottom: .75rem;
     transition: color .2s;
   }
 
@@ -221,6 +259,8 @@ const screens = [
   .btn-ghost {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-height: 44px;
     padding: .72rem 1.35rem;
     border-radius: 999px;
     font-family: var(--f-mono);
@@ -477,6 +517,11 @@ const screens = [
     border: 1px solid var(--line);
     padding: .1em .35em;
     border-radius: 4px;
+    /* An identifier like `allow_dangerous_deserialization=True` has no space
+       to break at, so on a narrow screen it pushed the whole page wider than
+       the viewport. `anywhere` also lets it shrink the line box, which
+       `break-word` does not. Block code is untouched — <pre> scrolls. */
+    overflow-wrap: anywhere;
   }
 
   /* Code and tables get the full column, not the prose measure — wrapping a

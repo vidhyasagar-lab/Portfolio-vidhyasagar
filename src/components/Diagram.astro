@@ -24,10 +24,18 @@ const { label, caption } = Astro.props;
 ---
 
 <figure class="diagram">
-  <div class="scroll" role="img" aria-label={label}>
+  {/* tabindex makes the scroll box reachable by keyboard: a scrollable region
+      that only a mouse or thumb can pan is unusable without one, and it is an
+      explicit WCAG requirement. */}
+  <div class="scroll" role="img" aria-label={label} tabindex="0">
     <slot />
   </div>
-  {caption && <figcaption>{caption}</figcaption>}
+  <figcaption>
+    {caption}
+    {/* Only rendered narrow, where the diagram genuinely overflows. Without
+        it a phone reader sees a cropped diagram and no sign it moves. */}
+    <span class="hint" aria-hidden="true">Scroll the diagram sideways to see all of it →</span>
+  </figcaption>
 </figure>
 
 <style>
@@ -56,11 +64,28 @@ const { label, caption } = Astro.props;
     height: auto;
   }
 
+  .scroll:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
   figcaption {
     margin-top: .7rem;
     font-family: var(--f-mono);
     font-size: .72rem;
     letter-spacing: .04em;
     color: var(--ink-3);
+  }
+
+  /* The SVG floor is 30rem plus 2.5rem of padding, so the box starts
+     overflowing just under 33rem. Show the hint only where that is true. */
+  .hint { display: none; }
+
+  @media (max-width: 33rem) {
+    .hint {
+      display: block;
+      margin-top: .3rem;
+      color: var(--accent);
+    }
   }
 </style>

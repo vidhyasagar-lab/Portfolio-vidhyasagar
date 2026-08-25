@@ -195,9 +195,23 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
     width: 30px;
     height: 30px;
     border-radius: 8px;
+    position: relative;
     color: var(--glass-ink-2);
     border: 1px solid transparent;
     transition: color .2s, background-color .2s, border-color .2s;
+  }
+
+  /* The chip stays 30px so the card's proportions hold, but a 30px target is
+     mean to a thumb. This grows the *hit* area to 44px without moving
+     anything: the card's own stretched link sits at z-index 1, so this has to
+     sit above it or the icon link becomes unreachable. */
+  @media (pointer: coarse) {
+    .links a::after {
+      content: '';
+      position: absolute;
+      inset: -7px;
+      z-index: 2;
+    }
   }
 
   .links a:hover {

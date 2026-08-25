@@ -188,6 +188,10 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
   .open {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    /* Matches the .btn-ghost floor beside it — the two sit in the same row,
+       and a short button next to a tall one reads as a mistake. */
+    min-height: 44px;
     gap: .5rem;
     cursor: pointer;
   }

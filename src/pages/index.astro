@@ -256,12 +256,23 @@ function countWord(n: number): string {
     color: var(--ink-2);
   }
 
-  .cta { display: flex; flex-wrap: wrap; gap: .7rem; }
+  .cta { display: flex; flex-wrap: wrap; gap: .7rem; max-width: 100%; }
+
+  /* The email address is one 25-character token with no break opportunity.
+     Uppercased and letter-spaced it is wider than a small phone, so let it
+     break rather than push the button past the screen edge. */
+  .cta .btn-primary {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
 
   .btn-primary,
   .btn-ghost {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-height: 44px;
     padding: .72rem 1.35rem;
     border-radius: 999px;
     font-family: var(--f-mono);
@@ -432,8 +443,12 @@ function countWord(n: number): string {
 
   .more a {
     display: inline-flex;
-    align-items: center;
+    /* Wraps to two lines on a narrow phone, so align to the last line rather
+       than centring a two-line box against a one-line rule. */
+    align-items: flex-end;
+    flex-wrap: wrap;
     gap: .5rem;
+    min-height: 44px;
     font-family: var(--f-mono);
     font-size: .76rem;
     letter-spacing: .1em;
@@ -515,7 +530,10 @@ function countWord(n: number): string {
     isolation: isolate;
     overflow: hidden;
     border-radius: 22px;
-    padding: clamp(2.25rem, 6vw, 4rem);
+    /* The 2.25rem floor ate 72px of a 320px screen, leaving too little for
+       the email button — which then overflowed and was silently clipped by
+       the `overflow: hidden` above. */
+    padding: clamp(1.35rem, 6vw, 4rem);
   }
 
   .contact-inner {
@@ -524,7 +542,12 @@ function countWord(n: number): string {
     display: grid;
     gap: 1.1rem;
     justify-items: start;
+    /* A grid column sizes to its widest item by default, so one unbreakable
+       button was widening the whole block, not just itself. */
+    min-width: 0;
   }
+
+  .contact-inner > * { max-width: 100%; }
 
   .contact h2 {
     font-size: clamp(1.9rem, 4.4vw, 3rem);

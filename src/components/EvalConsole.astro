@@ -148,10 +148,17 @@
     padding: .3rem .7rem;
     border-radius: 7px;
     cursor: pointer;
+    /* 30px clears the 24px minimum but is mean to a thumb. Grow only where
+       the pointer is actually coarse, so the desktop cluster stays dense. */
+    min-height: 30px;
     color: var(--glass-ink-2);
     background: color-mix(in srgb, var(--glass-ink) 7%, transparent);
     border: 1px solid color-mix(in srgb, var(--glass-ink) 18%, transparent);
     transition: color .2s, background-color .2s, border-color .2s, transform .2s;
+  }
+
+  @media (pointer: coarse) {
+    .chips button { min-height: 40px; padding-inline: .85rem; }
   }
 
   .chips button:hover {
