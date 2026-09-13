@@ -1,9 +1,9 @@
 ---
 company: "Atos Syntel"
 role: "Senior Consultant — AI Engineering"
-period: "Aug 2022 — Present"
+period: "Aug 2022 — Mar 2026"
 order: 10
-current: true
+current: false
 location: "India"
 summary: "Two Gen AI platforms for enterprise quality engineering, shipped into customer environments — including air-gapped ones where a hosted model API was never an option."
 owned:

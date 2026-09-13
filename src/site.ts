@@ -9,8 +9,8 @@ export const site = {
   fullName: 'Kokirala Vidhya Sagar',
   role: 'AI Engineer',
   blurb:
-    'Four years building multi-agent systems and fine-tuned language models for enterprise quality engineering — including small language models deployed on customers’ own secured hardware, where calling a hosted API was never an option.',
-  location: 'India',
+    'Four years building production Generative AI — RAG chatbots, multi-agent workflows and LLM evaluation pipelines. Currently building AI products for LMS platforms at Red Nucleus; before that, an eight-agent QA framework that automated up to 80% of manual validation, and small language models fine-tuned onto customers’ own secured hardware.',
+  location: 'Hyderabad, India',
   email: 'vidhyasagar54321@gmail.com',
   github: 'https://github.com/vidhyasagar-lab',
   linkedin: 'https://www.linkedin.com/in/kokirala-vidhyasagar',
@@ -22,18 +22,17 @@ export const cv = '/cv.pdf';
 
 /** Professional summary — the "first seven seconds" block on the CV page. */
 export const summary =
-  'Around four years building and deploying AI applications — multi-agent systems, fine-tuned language models, and the APIs and pipelines around them. Most of that work has shipped inside customer environments rather than on hosted infrastructure, which shapes how I choose models: the largest one is rarely the deployable one.';
+  'Four years building production Generative AI systems — RAG chatbots, multi-agent workflows, LLM evaluation pipelines and the APIs around them. Much of that work has shipped inside customer environments rather than on hosted infrastructure, which shapes how I choose models: the largest one is rarely the deployable one. Microsoft Certified Azure AI Engineer Associate.';
 
 /** Grouped so the left edge of the table is scannable in an F-pattern. */
 export const skills = [
-  { group: 'Languages', items: ['Python'] },
-  { group: 'AI & LLM', items: ['LangGraph', 'Azure OpenAI', 'AWS Bedrock', 'GCP Gemini', 'Llama', 'Qwen', 'Gemma', 'Hugging Face'] },
-  { group: 'Model tuning', items: ['LoRA', 'QLoRA', 'SLM on-prem deployment', 'Domain fine-tuning'] },
-  { group: 'Frameworks', items: ['Django', 'FastAPI', 'Flask'] },
-  { group: 'Data', items: ['PostgreSQL', 'Redis', 'Vector stores'] },
-  { group: 'Cloud', items: ['Azure', 'AWS'] },
-  { group: 'Platform', items: ['Docker', 'Git', 'Linux', 'REST APIs', 'CI/CD'] },
-  { group: 'Web', items: ['HTML', 'CSS', 'JavaScript'] },
+  { group: 'Generative AI', items: ['RAG', 'Prompt engineering', 'Text-to-SQL', 'LLM evaluation', 'Fine-tuning (LoRA, QLoRA)'] },
+  { group: 'Agentic AI', items: ['LangGraph', 'Letta', 'Multi-agent systems', 'Agent memory & state'] },
+  { group: 'LLMs & platforms', items: ['Azure OpenAI', 'AWS Bedrock', 'Google Gemini', 'Llama', 'Qwen', 'Gemma', 'Hugging Face'] },
+  { group: 'Eval & observability', items: ['RAGAS', 'DeepEval', 'Langfuse'] },
+  { group: 'Languages', items: ['Python', 'SQL', 'JavaScript', 'HTML', 'CSS'] },
+  { group: 'Frameworks', items: ['FastAPI', 'Django', 'Flask', 'REST APIs'] },
+  { group: 'Data & infra', items: ['PostgreSQL', 'Redis', 'Vector databases', 'Docker', 'Git', 'CI/CD', 'Linux', 'Azure', 'AWS'] },
 ] as const;
 
 export const certifications = [
@@ -46,6 +45,7 @@ export const recognition = [
   'Innovation Award',
   'Spot Recognition — test automation',
   'Spot Recognition — solution delivery',
+  'Customer Demo Recognition',
 ] as const;
 
 export const education = [
