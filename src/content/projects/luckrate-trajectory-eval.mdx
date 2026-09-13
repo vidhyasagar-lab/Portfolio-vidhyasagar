@@ -1,0 +1,267 @@
+---
+title: "luckrate"
+tagline: "Trajectory evaluation for AI agents — grade the path the agent took, not just the answer it returned. Including the one path nobody grades: a privileged tool call whose arguments came from a web page the agent read."
+role: "Sole engineer — scorer, provenance model, framework adapters, CI gate"
+period: "2026"
+stack: ["Python", "LangGraph", "n8n", "pytest", "GitHub Actions", "Zero dependencies"]
+# Points straight at the repo. Note it is currently private, so a visitor
+# without access lands on GitHub's 404 — make the repo public for this link to
+# resolve for anyone.
+repo: "https://github.com/vidhyasagar-lab/agent-evaluator"
+problem: "An agent can reach the right answer by calling a tool it should never have touched, inventing an id that happened to exist, or acting on an instruction it read off a web page. Every one of those scores green today."
+shots: []
+outcomes:
+  - metric: "0"
+    label: "runtime dependencies"
+  - metric: "45"
+    label: "tests, on three Python versions"
+  - metric: "2"
+    label: "agent frameworks, one spec"
+featured: true
+order: 2
+---
+
+import Diagram from '../../components/Diagram.astro';
+
+Every agent eval scores the final output. Right answer, pass.
+
+But an agent can reach the right answer the wrong way. It can call a tool it was never meant to
+touch. It can invent an order id that happens to exist. It can retry the same call five times,
+or loop on a failing tool instead of escalating. All four come back green, and all four are an
+incident later.
+
+This library grades the **trajectory** — the ordered list of tool calls the agent actually made
+— against a spec you write in a Python dict.
+
+## Luck Rate
+
+The metric the package is named after, and the reason it exists:
+
+```
+luck = |output_ok AND NOT path_ok| / |output_ok|
+```
+
+Of the runs that *looked* green, the share that got there on a bad path.
+
+The denominator is the part I'd defend in review. Dividing by all runs lets failing outputs
+dilute the rate, so an agent that fails half its cases scores as luck-free. The question the
+metric answers is "of the runs I would have shipped on, how many were fluke?" — so only
+output-passing runs belong in it.
+
+It reports `—` rather than `0` when nothing passed, because no data and no luck are different
+facts. And counts print beside the percentage, since a bare 33% off three runs invites being
+read as though it meant something.
+
+## Three severities, because one is a lie
+
+A single scale forces every check to be either build-breaking or ignorable, and most checks are
+neither.
+
+**hard** fails on a single occurrence — a forbidden tool, a missing required one, a violated
+ordering. **soft** fails only if most runs in a `k`-run batch fail it, which is the right shape
+for step budgets and repeats, because agents are stochastic and one long run is not a
+regression. **warn** never fails a build at all.
+
+The gate reads that directly:
+
+```python
+def failed(rows):
+    """Gate: hard violations fail on one occurrence, soft only on a majority."""
+    if any(r["hard"] for r in rows):
+        return True
+    ...
+    return any(sum(flags) * 2 > len(flags) for flags in by_case.values())
+```
+
+Luck Rate is deliberately stricter than the gate. A fabricated id is warn-only, so it never
+breaks CI — but it is exactly the bad path the metric exists to surface, so `path_ok` counts
+warnings too. The gate protects the build; the metric tells you the truth.
+
+## Provenance, and the injection it catches
+
+The part worth reading.
+
+Before scoring, the checker walks the trajectory in order, building a corpus of everything the
+agent has been told so far: the task input under `user`, then each tool's result under
+`tool:<name>`. For every identifier-shaped argument, it asks which of those sources the value
+appears in.
+
+That gives two checks for the price of one walk.
+
+An argument that appears in **nothing** is ungrounded — the agent made it up. An argument that
+appears only in an **untrusted** tool's output, and is then passed to a **privileged** tool, is
+the signature of indirect prompt injection: the agent acting on content it read rather than on
+what the user asked for.
+
+<Diagram
+  label="Provenance walk over a trajectory. The task input seeds the corpus under the source name user. lookup_order is called with id 88213, which is found in the user's text, so it is grounded. read_email is then called, and its result joins the corpus as an untrusted source. Finally send_email, a privileged tool, is called with a recipient address that appears only in the read_email result and not in the user's text — which is flagged as tainted."
+  caption="The agent was never asked to email anyone. It read the instruction off a page and acted on it."
+>
+<svg viewBox="0 0 740 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="te-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)" />
+    </marker>
+  </defs>
+
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#te-arrow)">
+    <path d="M189,72 V110" />
+    <path d="M189,162 V200" />
+    <path d="M189,252 V290" />
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="12.5" fill="var(--ink)" text-anchor="middle">
+    {/* Blue is trusted input, red the untrusted source, accent the privileged
+        call. Fills mix into --surface so they hold on both grounds. */}
+    <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
+      stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="24" y="20"  width="330" height="52" rx="9" />
+      <rect x="24" y="110" width="330" height="52" rx="9" />
+    </g>
+
+    <rect x="24" y="200" width="330" height="52" rx="9"
+      fill="color-mix(in srgb, #E5534B 13%, var(--surface))"
+      stroke="color-mix(in srgb, #E5534B 55%, var(--line-strong))" stroke-width="1.3" />
+
+    <rect x="24" y="290" width="330" height="52" rx="9"
+      fill="color-mix(in srgb, var(--accent) 16%, var(--surface))"
+      stroke="var(--accent)" stroke-width="2" />
+
+    <text x="189" y="51">task input</text>
+    <text x="189" y="141">lookup_order(id=88213)</text>
+    <text x="189" y="231">read_email()</text>
+    <text x="189" y="321" fill="var(--accent)">send_email(to=…)</text>
+  </g>
+
+  <g font-family="var(--f-mono)" font-size="10.5" fill="var(--ink-3)" text-anchor="start">
+    <text x="380" y="42">corpus gains</text>
+    <text x="380" y="57" fill="var(--ink-2)">user</text>
+
+    <text x="380" y="132">88213 appears in user</text>
+    <text x="380" y="147" fill="var(--ink-2)">grounded</text>
+
+    <text x="380" y="222">result joins corpus as</text>
+    <text x="380" y="237" fill="var(--ink-2)">tool:read_email — untrusted</text>
+
+    <text x="380" y="305">recipient appears only in</text>
+    <text x="380" y="320" fill="var(--ink-2)">tool:read_email, never in user</text>
+    <text x="380" y="337" fill="color-mix(in srgb, #E5534B 70%, var(--ink))"
+      font-size="12">TAINTED — hard violation</text>
+  </g>
+</svg>
+</Diagram>
+
+One line does the discriminating:
+
+```python
+for key, sources in args.items():
+    if "user" in sources:
+        continue
+    dirty = sources & untrusted
+```
+
+If the user also supplied the value, it is not tainted — even if an untrusted tool happens to
+echo it. Skipping that check would flag every agent that reads a page mentioning the order id
+the user just typed, which is most of them.
+
+The whole thing stays off unless a spec declares both `untrusted` and `privileged`. A security
+check that fires when you have not told it what is sensitive produces noise, and noise gets
+switched off.
+
+## Naming the ceiling instead of hiding it
+
+Provenance is substring matching. It cannot distinguish a coincidental match from a real data
+flow, and it deliberately ignores prose arguments, because synthesis is the entire point of
+those. That limit is written into the source rather than left for someone to discover:
+
+```python
+# ponytail: substring matching. It cannot tell a coincidental match from a real
+# data flow, and it only inspects identifier-shaped values -- prose arguments are
+# skipped because synthesis is the point of them. Swap in a real dataflow trace
+# if the false-positive rate ever justifies one.
+```
+
+The severity model is what makes that honesty affordable. Ungrounded arguments are warn-only
+precisely because the check false-positives on enums a model legitimately knows — `high`,
+`pending` — which appear in no prior text but are not invented. A check that is right most of
+the time is useful as a review signal and unacceptable as a build gate, so it is wired in as
+the former.
+
+Taint is hard, not warn, because its false-positive path is already closed: it only fires on
+tools the spec explicitly called privileged, carrying values the user never supplied.
+
+## One spec, two frameworks
+
+Both adapters normalise into the same nine-field `Step`, so a spec written once runs against an
+n8n canvas and a LangGraph graph unchanged. Neither adapter imports its framework — the n8n one
+reads an execution payload, the LangGraph one reads a message list — which is how the package
+keeps **zero runtime dependencies**.
+
+Two details in there took real debugging.
+
+n8n identifies a tool call by an `ai_tool` input override rather than a node type, so no
+allow-list of node names is needed. But its ordering has a trap:
+
+```python
+# executionIndex is a monotonic int across the execution; startTime is only
+# millisecond-resolution. Choose one for ALL entries: the two live in
+# different number spaces, so mixing them per-entry scrambles the order.
+```
+
+Falling back per-entry rather than per-execution silently interleaves a counter with a
+timestamp, and a trajectory in the wrong order fails every `before` constraint for no reason.
+
+The LangGraph adapter appends a step when the call is **issued**, not when its result arrives.
+That keeps the ordering honest and means a tool call that never returned still appears in the
+trajectory — which is precisely the run you want to see.
+
+## Failures that do not discard the batch
+
+A suite is `k` real agent runs per case, and real money. So a thrown exception mid-suite records
+itself and keeps going:
+
+```python
+except Exception as exc:
+    # A suite is real money: one network blip must not discard every
+    # completed run. Record the failure and keep going. It counts as
+    # a hard violation because a suite that did not finish cannot
+    # certify anything.
+```
+
+It still counts as a hard violation, because a suite that did not finish cannot certify
+anything. Resilient about the batch, strict about the verdict.
+
+The spec itself is validated before anything runs: naming a tool in `required` that is not in
+the spec's own `tools` vocabulary raises immediately, because a typo there is indistinguishable
+from an agent that never called the tool, and the author would go hunting the wrong bug.
+
+## What I would change
+
+**Provenance should be a real dataflow trace.** Substring matching is the honest 80% and the
+comment above says so. A proper trace would remove the prose-argument blind spot and most false
+positives at once.
+
+**`Step.t` is always zero on LangGraph**, because LangChain messages carry no timestamps.
+Ordering comes from the list position, which is correct but means no latency checks on that
+adapter.
+
+**Unbounded retries of a *failing* tool are left to `max_steps`.** A repeat only counts once the
+identical call has already succeeded, since retrying after a failure is correct behaviour. A
+loop on a permanently failing tool is caught by the step budget instead, which is indirect.
+
+**Two adapters is not "any framework".** CrewAI is the obvious third; `Step.agent` already
+exists as the hook for it and is unused until then.
+
+## The principle behind it
+
+Output evals ask whether the agent got the right answer. They cannot ask whether it was entitled
+to.
+
+A right answer reached by touching a forbidden tool is a policy breach that passed CI. A right
+answer built on an invented identifier is a coincidence you shipped. A right answer produced by
+following instructions the agent read off a web page is an attacker's answer, and it scores
+identically to yours.
+
+Grading the path is the only place those become visible — and Luck Rate exists to put a number
+on how often your green build was green by accident.
