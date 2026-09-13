@@ -14,7 +14,9 @@ export const site = {
   email: 'vidhyasagar54321@gmail.com',
   github: 'https://github.com/vidhyasagar-lab',
   linkedin: 'https://www.linkedin.com/in/kokirala-vidhyasagar',
-  status: 'Open to AI engineering roles',
+  /** Eyebrow above the hero. Deliberately states the specialism, not
+      availability: the site gets shared with colleagues, not only recruiters. */
+  status: 'RAG · Multi-agent systems · LLM evaluation',
 } as const;
 
 /** Public CV. Drop the file at public/cv.pdf; nothing else references it. */
