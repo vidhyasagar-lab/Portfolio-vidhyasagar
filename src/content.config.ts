@@ -22,6 +22,9 @@ const projects = defineCollection({
         points at the profile instead). */
     repoLabel: z.string().optional(),
     live: z.string().url().optional(),
+    /** Link text for `live`. Defaults to "Open live app"; override when the URL
+        is not a running application (e.g. a published package page). */
+    liveLabel: z.string().optional(),
     /** The hardest problem, in one sentence. Drives the card hover. */
     problem: z.string(),
     /** Quantified outcomes. Impact, not tech list. */

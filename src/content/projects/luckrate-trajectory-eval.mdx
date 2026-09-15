@@ -1,22 +1,23 @@
 ---
 title: "luckrate"
-tagline: "Trajectory evaluation for AI agents — grade the path the agent took, not just the answer it returned. Including the one path nobody grades: a privileged tool call whose arguments came from a web page the agent read."
+tagline: "Trajectory evaluation for AI agents — grade the path the agent took, not just the answer it returned. Including the one path nobody grades: a privileged tool call whose arguments came from a web page the agent read. Published on PyPI."
 role: "Sole engineer — scorer, provenance model, framework adapters, CI gate"
 period: "2026"
-stack: ["Python", "LangGraph", "n8n", "pytest", "GitHub Actions", "Zero dependencies"]
-# Points straight at the repo. Note it is currently private, so a visitor
-# without access lands on GitHub's 404 — make the repo public for this link to
-# resolve for anyone.
-repo: "https://github.com/vidhyasagar-lab/agent-evaluator"
+stack: ["Python", "LangGraph", "CrewAI", "n8n", "OpenTelemetry", "pytest", "GitHub Actions", "Zero dependencies"]
+# Published, so this one link actually resolves for a visitor. The GitHub repo
+# is still private, which is why `repo` is deliberately absent rather than
+# pointing at a 404.
+live: "https://pypi.org/project/luckrate/"
+liveLabel: "View on PyPI"
 problem: "An agent can reach the right answer by calling a tool it should never have touched, inventing an id that happened to exist, or acting on an instruction it read off a web page. Every one of those scores green today."
 shots: []
 outcomes:
   - metric: "0"
     label: "runtime dependencies"
-  - metric: "45"
+  - metric: "4"
+    label: "adapters, one spec"
+  - metric: "62"
     label: "tests, on three Python versions"
-  - metric: "2"
-    label: "agent frameworks, one spec"
 featured: true
 order: 2
 ---
@@ -31,7 +32,11 @@ or loop on a failing tool instead of escalating. All four come back green, and a
 incident later.
 
 This library grades the **trajectory** — the ordered list of tool calls the agent actually made
-— against a spec you write in a Python dict.
+— against a spec you write in a Python dict. It is published:
+
+```bash
+pip install luckrate
+```
 
 ## Luck Rate
 
@@ -191,14 +196,17 @@ the former.
 Taint is hard, not warn, because its false-positive path is already closed: it only fires on
 tools the spec explicitly called privileged, carrying values the user never supplied.
 
-## One spec, two frameworks
+## One spec, four adapters
 
-Both adapters normalise into the same nine-field `Step`, so a spec written once runs against an
-n8n canvas and a LangGraph graph unchanged. Neither adapter imports its framework — the n8n one
-reads an execution payload, the LangGraph one reads a message list — which is how the package
-keeps **zero runtime dependencies**.
+Every adapter normalises into the same `Step`, so a spec written once runs unchanged against an
+n8n canvas, a LangGraph graph, a CrewAI crew, or **any agent instrumented with OpenTelemetry**.
 
-Two details in there took real debugging.
+None of them imports its framework. n8n reads an execution payload, LangGraph a message list,
+CrewAI a list of events, OpenTelemetry the exported span JSON. That is not a stylistic choice —
+it is the entire reason the package holds **zero runtime dependencies** while claiming to
+support four ecosystems.
+
+Four details in there took real debugging.
 
 n8n identifies a tool call by an `ai_tool` input override rather than a node type, so no
 allow-list of node names is needed. But its ordering has a trap:
@@ -215,6 +223,35 @@ timestamp, and a trajectory in the wrong order fails every `before` constraint f
 The LangGraph adapter appends a step when the call is **issued**, not when its result arrives.
 That keeps the ordering honest and means a tool call that never returned still appears in the
 trajectory — which is precisely the run you want to see.
+
+CrewAI cost the most time, because the obvious hook is the wrong one:
+
+```python
+"""`Crew.step_callback` is NOT the hook: on crewai 1.x it fires only with
+AgentFinish and carries no tool at all, so a trajectory built from it is empty.
+"""
+```
+
+An empty trajectory does not raise. It scores as a run that violated nothing, which is the most
+expensive possible way to be wrong about an evaluator. The adapter reads the event bus instead,
+and re-sorts by `started_at` — events arrive as each call *finishes*, so a slow first call
+otherwise lands last.
+
+The OpenTelemetry adapter is the one that changes what the package is, because it is not tied to
+a framework at all: any agent emitting OpenInference spans can be graded, including ones that
+did not exist when this was written. The decision inside it is the part I would point at:
+
+```python
+"""OpenInference is read rather than OTel's own GenAI semconv because GenAI does
+not record tool arguments or results by default -- content capture is opt-in.
+Empty args would make provenance and taint checks pass everything silently,
+which is worse than not supporting the convention at all.
+"""
+```
+
+Supporting the better-known standard would have looked more complete and quietly disabled both
+security checks. A green build from a check that inspected nothing is worse than a missing
+feature, because only one of those two tells you the truth.
 
 ## Failures that do not discard the batch
 
@@ -250,8 +287,16 @@ adapter.
 identical call has already succeeded, since retrying after a failure is correct behaviour. A
 loop on a permanently failing tool is caught by the step budget instead, which is indirect.
 
-**Two adapters is not "any framework".** CrewAI is the obvious third; `Step.agent` already
-exists as the hook for it and is unused until then.
+**`Step.agent` is populated but nothing scores it.** CrewAI fills it from `agent_role`, and the
+OpenTelemetry adapter walks up the span tree to the nearest ancestor `AGENT`. So the trajectory
+already knows which agent made which call — and no constraint can yet say "only the researcher
+may call `web_search`". That is the obvious next spec field, and the data for it is sitting
+there unused.
+
+**Each adapter is pinned to one version it was confirmed against** — n8n 2.38.1, crewai
+1.15.21. They are read against recorded fixtures, not a live install, so an upstream shape
+change breaks quietly rather than failing a test. Pulling real fixtures on a schedule would
+catch that; today nothing does.
 
 ## The principle behind it
 

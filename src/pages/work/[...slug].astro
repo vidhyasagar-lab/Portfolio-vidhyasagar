@@ -69,7 +69,9 @@ const screens = [
         <div class="actions rise" style="animation-delay:.28s">
           {d.live && (
             <a class="btn-primary" href={d.live} rel="noopener noreferrer" target="_blank">
-              Open live app
+              {/* Same reasoning as repoLabel below: "Open live app" sends a
+                  reader expecting a running app to a package page. */}
+              {d.liveLabel ?? 'Open live app'}
             </a>
           )}
           {d.repo && (
