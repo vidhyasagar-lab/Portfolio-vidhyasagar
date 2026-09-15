@@ -11,6 +11,13 @@ dist/
 research-report.html
 
 # Source resume + extracted text: contain a phone number. Never commit.
+# The PDF was missing from this list while a resume PDF sat in the repo root,
+# so `git add .` would have published a phone number. Match the format, not
+# the filename — the next export will be called something else again.
 *.docx
 *.doc
+*.pdf
 resume.txt
+
+# ...but the site's own CV download, if one is ever added, must still ship.
+!public/cv.pdf

@@ -257,27 +257,7 @@ const screens = [
 
   .actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: .4rem; }
 
-  .btn-primary,
-  .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: .72rem 1.35rem;
-    border-radius: 999px;
-    font-family: var(--f-mono);
-    font-size: .78rem;
-    font-weight: 500;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    border: 1px solid transparent;
-    transition: transform .25s, border-color .25s, color .25s;
-  }
-
-  .btn-primary { background: var(--accent); color: var(--accent-ink); }
-  .btn-ghost { border-color: var(--line-strong); color: var(--ink-2); }
-  .btn-primary:hover { transform: translateY(-2px); }
-  .btn-ghost:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--accent); }
+  /* Base button lives in global.css — this page adds nothing to it. */
 
   /* --------- layout: rail + article ---------
      Same shape as /experience, so the two long-form pages read as one system. */

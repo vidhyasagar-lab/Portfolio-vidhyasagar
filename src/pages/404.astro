@@ -9,7 +9,10 @@ import Base from '../layouts/Base.astro';
       <p class="mono-label">404</p>
       <h1>That page retrieved nothing.</h1>
       <p class="prose">The link is broken or the page has moved. The work is all still here.</p>
-      <a class="btn" href="/">Back to the work</a>
+      <div class="acts">
+        <a class="btn-primary" href="/">Back to the work</a>
+        <a class="btn-ghost" href="/experience">Read the CV</a>
+      </div>
     </div>
   </section>
 </Base>
@@ -38,20 +41,9 @@ import Base from '../layouts/Base.astro';
     max-width: 14ch;
   }
 
-  .btn {
-    margin-top: .6rem;
-    display: inline-flex;
-    padding: .72rem 1.35rem;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--accent-ink);
-    font-family: var(--f-mono);
-    font-size: .78rem;
-    font-weight: 500;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    transition: transform .25s;
-  }
-
-  .btn:hover { transform: translateY(-2px); }
+  /* This page had its own copy of the primary button, which is how it ended
+     up as the one button on the site with no 44px floor. It uses the shared
+     one from global.css now, and offers a second way out: someone who lands
+     here from a stale link is as likely to want the CV as the work index. */
+  .acts { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: .6rem; }
 </style>

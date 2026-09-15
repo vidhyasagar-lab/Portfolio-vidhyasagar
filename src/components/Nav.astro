@@ -1,5 +1,19 @@
 ---
 import { site, nav } from '../site';
+
+/** Trailing slash normalised: Astro serves /experience/ but links to /experience. */
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+
+/**
+ * "page" only when this really is the page you are on. Reading a case study
+ * you are inside Work but not on it, and aria-current="page" would be a lie
+ * to a screen reader; "location" is the value for a place within a section.
+ */
+function current(match?: string): 'page' | 'location' | undefined {
+  if (!match) return undefined;
+  if (path === match) return 'page';
+  return path.startsWith(`${match}/`) ? 'location' : undefined;
+}
 ---
 
 <header class="bar">
@@ -12,7 +26,7 @@ import { site, nav } from '../site';
     <nav aria-label="Primary">
       <ul>
         {nav.map((item) => (
-          <li><a href={item.href}>{item.label}</a></li>
+          <li><a href={item.href} aria-current={current(item.match)}>{item.label}</a></li>
         ))}
       </ul>
     </nav>
@@ -122,6 +136,35 @@ import { site, nav } from '../site';
     background: color-mix(in srgb, var(--glass-ink) 9%, transparent);
   }
 
+  /* Where you are. Two signals, not one: the fill alone would be
+     indistinguishable from the hover state on a touch screen that has just
+     been tapped, and colour alone fails for anyone who cannot see it. The
+     underline is drawn as a pseudo-element so it sits inside the pill's
+     padding rather than under the whole 44px target. */
+  ul a[aria-current] {
+    position: relative;
+    color: var(--glass-ink);
+    background: color-mix(in srgb, var(--glass-ink) 7%, transparent);
+  }
+
+  ul a[aria-current]::after {
+    content: '';
+    position: absolute;
+    left: .8rem;
+    right: .8rem;
+    bottom: .5rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* Inside Work but not on a Work page: same cue, stated more quietly. */
+  ul a[aria-current="location"]::after { opacity: .5; }
+
+  @media (max-width: 34rem) {
+    ul a[aria-current]::after { left: .5rem; right: .5rem; }
+  }
+
   button {
     flex: none;
     display: grid;
@@ -141,7 +184,26 @@ import { site, nav } from '../site';
     background: color-mix(in srgb, var(--glass-ink) 14%, transparent);
   }
 
+  /* The theme flips instantly, so without this the only confirmation a touch
+     user gets that the tap landed is the whole page changing colour. */
+  button:active {
+    transform: scale(.92);
+    transition-duration: .06s;
+  }
+
   button svg { grid-area: 1 / 1; }
+
+  /* 34px keeps the pill's proportions, but it is the most-tapped control on
+     the site and 34px is under the 44px target. Same trick as the card's icon
+     links: grow the hit area, move nothing. */
+  @media (pointer: coarse) {
+    button::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+    }
+    button { position: relative; }
+  }
 
   /* Show the icon for the theme you'd switch TO. */
   .moon { display: none; }

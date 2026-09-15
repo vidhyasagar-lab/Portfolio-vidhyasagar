@@ -1,11 +1,30 @@
 ---
 import { site } from '../site';
 const year = new Date().getFullYear();
+
+/** Same three destinations as the contact block, which is 4,000 words up the
+    page by the time anyone reaches the bottom of a case study. */
+const links = [
+  { href: `mailto:${site.email}`, label: 'Email', external: false },
+  { href: site.github, label: 'GitHub', external: true },
+  { href: site.linkedin, label: 'LinkedIn', external: true },
+];
 ---
 
 <footer class="foot">
   <div class="shell inner">
     <p class="mono-label">© {year} {site.name}</p>
+
+    <nav class="links" aria-label="Elsewhere">
+      {links.map((l) => (
+        <a
+          class="mono-label"
+          href={l.href}
+          rel={l.external ? 'noopener noreferrer' : undefined}
+          target={l.external ? '_blank' : undefined}
+        >{l.label}</a>
+      ))}
+    </nav>
   </div>
 </footer>
 
@@ -24,4 +43,27 @@ const year = new Date().getFullYear();
     align-items: center;
     justify-content: space-between;
   }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem;
+  }
+
+  .links a {
+    display: inline-flex;
+    align-items: center;
+    /* These are the last targets on the page and the easiest to mis-tap. */
+    min-height: 44px;
+    padding-inline: .6rem;
+    border-radius: 999px;
+    transition: color .2s, background-color .2s;
+  }
+
+  .links a:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .links a:active { color: var(--accent); }
 </style>

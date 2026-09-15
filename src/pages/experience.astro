@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Experience from '../components/Experience.astro';
-import { site, cv, summary, skills, certifications, recognition, education } from '../site';
+import { site, cv, cvFilename, summary, skills, certifications, recognition, education } from '../site';
 
 const sections = [
   { id: 'summary', label: 'Summary' },
@@ -29,7 +29,7 @@ const sections = [
       </p>
 
       <div class="acts rise" style="animation-delay:.28s">
-        <a class="btn-primary" href={cv} download>Download CV</a>
+        <a class="btn-primary" href={cv} download={cvFilename}>Download CV</a>
         <a class="btn-ghost" href={`mailto:${site.email}`}>{site.email}</a>
       </div>
     </div>
@@ -101,7 +101,7 @@ const sections = [
             <li>
               <b>{e.award}</b>
               <span>{e.place}</span>
-              <span class="mono grade">{e.detail}</span>
+              {'detail' in e && <span class="mono grade">{e.detail}</span>}
             </li>
           ))}
         </ul>
@@ -145,26 +145,9 @@ const sections = [
 
   .acts { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: .5rem; }
 
-  .btn-primary, .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: .72rem 1.35rem;
-    border-radius: 999px;
-    font-family: var(--f-mono);
-    font-size: .76rem;
-    font-weight: 500;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    border: 1px solid transparent;
-    transition: transform .25s, border-color .25s, color .25s;
-  }
-
-  .btn-primary { background: var(--accent); color: var(--accent-ink); }
-  .btn-ghost { border-color: var(--line-strong); color: var(--ink-2); text-transform: none; letter-spacing: .04em; }
-  .btn-primary:hover { transform: translateY(-2px); }
-  .btn-ghost:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--accent); }
+  /* Base button lives in global.css. The only thing this page needs is the
+     ghost carrying an email address, which must not be uppercased. */
+  .btn-ghost { text-transform: none; letter-spacing: .04em; }
 
   /* ---------- layout ---------- */
 

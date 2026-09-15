@@ -84,6 +84,13 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
     box-shadow: var(--glass-shadow), 0 0 0 1px var(--accent-glow);
   }
 
+  /* Pressed. The whole card is the target, so the whole card answers — and it
+     has to override the tilt transform, which is why it repeats the lift. */
+  .card:has(.hit:active) {
+    transform: translate3d(0, 0, 0) scale(.99);
+    transition-duration: .08s;
+  }
+
   /* Whole card is clickable, but the repo/live links stay independent. */
   .hit {
     position: absolute;

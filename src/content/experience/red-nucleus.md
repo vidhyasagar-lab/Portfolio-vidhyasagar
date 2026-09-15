@@ -17,10 +17,12 @@ owned:
     detail: "Persistent, stateful persona context on Letta, driving interactive simulations across scenarios."
   - label: "Text-to-SQL"
     detail: "Plain-English questions against the admin database, exported as shareable files — self-service data for managers."
+  - label: "Session survey tool"
+    detail: "Collects attendee questions during company sessions and uses an LLM to categorise and summarise them — internal, but the same retrieval-and-summarise shape as the client work."
   - label: "Observability"
     detail: "Langfuse tracing across every AI product: prompts, retrieval steps and model responses, end to end."
 impact:
-  - metric: "6"
+  - metric: "7"
     label: "AI products in production"
   - metric: "3"
     label: "evaluation layers: RAGAS, DeepEval, Langfuse"

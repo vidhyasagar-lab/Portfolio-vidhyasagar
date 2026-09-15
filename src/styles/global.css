@@ -177,6 +177,10 @@
 
 * { box-sizing: border-box; }
 
+/* `hidden` is a UA style, so any author `display` beats it — a
+   `.btn-primary[hidden]` would still show. Restore the intent. */
+[hidden] { display: none !important; }
+
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -258,6 +262,52 @@ img { max-width: 100%; height: auto; display: block; }
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
+}
+
+/* --- BUTTONS -----------------------------------------------
+   One definition. This lived in four files (index, experience,
+   the case-study template, and a bespoke `.btn` on 404), which is
+   why only some of them ever gained a pressed state. Scoped
+   overrides still win on specificity, so `.contact .btn-ghost`
+   and the CV page's lowercase ghost keep working untouched.
+   ----------------------------------------------------------- */
+
+.btn-primary,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* WCAG 2.5.8: 24px is the AA floor, 44px the AAA target. */
+  min-height: 44px;
+  padding: .72rem 1.35rem;
+  border-radius: 999px;
+  font-family: var(--f-mono);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform .25s, background-color .25s, border-color .25s, color .25s;
+}
+
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-ghost   { border-color: var(--line-strong); color: var(--ink-2); }
+
+.btn-primary:hover { transform: translateY(-2px); }
+.btn-ghost:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Press feedback. Without this the button lifts on hover and then does
+   nothing at all on the click itself, which on a touch screen — where
+   there is no hover — means tapping returns no feedback whatsoever. */
+.btn-primary:active,
+.btn-ghost:active {
+  transform: translateY(1px) scale(.985);
+  transition-duration: .06s;
 }
 
 /* --- GLASS -------------------------------------------------
@@ -571,4 +621,105 @@ main, .foot { position: relative; z-index: 2; }
     transition-duration: .01ms !important;
   }
   .reveal { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   PRINT
+   /experience is a CV, and a recruiter's "save this" is Ctrl+P.
+   The browser already writes PDFs, so the page only has to stop
+   fighting it: drop the ambient field, the chrome and the glass,
+   and set real ink on real paper.
+   ============================================================ */
+
+@media print {
+  /* Light tokens unconditionally — printing the dark theme burns a
+     cartridge and prints amber body text onto white paper. */
+  :root, :root[data-theme="dark"], :root[data-theme="light"] {
+    --bg: #FFFFFF;
+    --bg-deep: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-2: #FFFFFF;
+    --ink: #000000;
+    --ink-2: #1F1F1F;
+    --ink-3: #4A4A4A;
+    --line: #CCCCCC;
+    --line-strong: #999999;
+    --accent: #000000;
+    --accent-ink: #FFFFFF;
+    --glass-bg: transparent;
+    --glass-border: #CCCCCC;
+    --glass-ink: #000000;
+    --glass-ink-2: #1F1F1F;
+    --glass-shadow: none;
+    --neu-bg: #FFFFFF;
+    --neu-border: #CCCCCC;
+    --neu-light: transparent;
+    --neu-dark: transparent;
+  }
+
+  @page { margin: 14mm; }
+
+  html, body {
+    background: #FFFFFF;
+    color: #000000;
+    font-size: 10.5pt;
+  }
+
+  /* Screen furniture that carries no information on paper. */
+  .bar, .foot, .ambient, .efield, .read-progress, .skip, .mesh,
+  .index, .acts, .more, .end { display: none !important; }
+
+  /* `visibility`, not `display`. The disclosure chevron is the first cell of
+     the platform summary's three-column grid; removing it from flow slides
+     the name into the 1.1rem chevron column and the description on top of it.
+     Hiding it in place keeps the track. */
+  .chev { visibility: hidden; }
+
+  /* The CV's two-column grid reserves 11rem for the section index. Hiding the
+     index removes it from grid flow, so the document slides into that 11rem
+     column and prints as a ribbon down the left margin. Nothing here needs a
+     grid once the index is gone. */
+  .layout { display: block !important; }
+
+  /* Platform detail lives in <details>, and on paper there is nothing to
+     click. Chrome's UA sheet hides the non-summary children of a closed
+     <details>, so this has to outrank it. Without it the most substantial
+     part of each role silently does not print. */
+  details > *:not(summary) { display: block !important; }
+  details summary { list-style: none; }
+
+  /* Two mechanisms, because engines disagree on which one hides a closed
+     <details>. Older ones set `display: none` on the children, which the rule
+     above handles; Chrome and Safari now hide the generated
+     `::details-content` box with content-visibility instead, which no rule on
+     the children can reach. */
+  details::details-content {
+    content-visibility: visible !important;
+    block-size: auto !important;
+  }
+
+  .glass, .neu, .neu-inset {
+    background: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border-color: #CCCCCC !important;
+  }
+
+  .shell { max-width: none; padding-inline: 0; }
+
+  /* Keep a heading with the block it introduces. */
+  h1, h2, h3 { break-after: avoid; }
+  section, article, li { break-inside: avoid; }
+
+  /* A printed link is a dead end unless its target is on the page. */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--f-mono);
+    font-size: .8em;
+    color: #4A4A4A;
+    word-break: break-all;
+  }
+
+  .reveal { opacity: 1 !important; transform: none !important; }
 }

@@ -9,7 +9,7 @@ export const site = {
   fullName: 'Kokirala Vidhya Sagar',
   role: 'AI Engineer',
   blurb:
-    'Four years building production Generative AI — RAG chatbots, multi-agent workflows and LLM evaluation pipelines. Currently building AI products for LMS platforms at Red Nucleus; before that, an eight-agent QA framework that automated up to 80% of manual validation, and small language models fine-tuned onto customers’ own secured hardware.',
+    'Four years building production Generative AI — RAG chatbots, multi-agent workflows and LLM evaluation pipelines. Currently building AI products for LMS platforms at Red Nucleus; before that, IQE, a node-based test automation platform, and an eight-agent QA framework that automated up to 80% of manual validation.',
   location: 'Hyderabad, India',
   email: 'vidhyasagar54321@gmail.com',
   github: 'https://github.com/vidhyasagar-lab',
@@ -19,27 +19,39 @@ export const site = {
   status: 'RAG · Multi-agent systems · LLM evaluation',
 } as const;
 
-/** Public CV. Drop the file at public/cv.pdf; nothing else references it. */
+/**
+ * The downloadable CV, served verbatim from the resume export. Replace
+ * public/cv.pdf on every resume update — /experience is maintained separately
+ * in this file, so the two can drift if only one is touched.
+ */
 export const cv = '/cv.pdf';
+
+/** What the file is called once it lands in someone's Downloads folder. */
+export const cvFilename = 'Vidhyasagar_Resume_AI_Engineer.pdf';
 
 /** Professional summary — the "first seven seconds" block on the CV page. */
 export const summary =
-  'Four years building production Generative AI systems — RAG chatbots, multi-agent workflows, LLM evaluation pipelines and the APIs around them. Much of that work has shipped inside customer environments rather than on hosted infrastructure, which shapes how I choose models: the largest one is rarely the deployable one. Microsoft Certified Azure AI Engineer Associate.';
+  'Four years building production Generative AI systems — RAG chatbots, multi-agent workflows, LLM evaluation pipelines and the APIs around them. Most recently IQE, a node-based test automation platform where QA teams compose AI agents on a canvas, and an eight-agent QA framework. Much of that work has shipped inside customer environments rather than on hosted infrastructure, which shapes how I choose models: the largest one is rarely the deployable one. Microsoft Certified Azure AI Engineer Associate.';
 
-/** Grouped so the left edge of the table is scannable in an F-pattern. */
+/**
+ * Grouped so the left edge of the table is scannable in an F-pattern.
+ * Groups mirror the resume's, deliberately: a recruiter often has both open,
+ * and two different taxonomies of the same skills reads as two people.
+ */
 export const skills = [
-  { group: 'Generative AI', items: ['RAG', 'Prompt engineering', 'Text-to-SQL', 'LLM evaluation', 'Fine-tuning (LoRA, QLoRA)'] },
-  { group: 'Agentic AI', items: ['LangGraph', 'Letta', 'Multi-agent systems', 'Agent memory & state'] },
-  { group: 'LLMs & platforms', items: ['Azure OpenAI', 'AWS Bedrock', 'Google Gemini', 'Llama', 'Qwen', 'Gemma', 'Hugging Face'] },
-  { group: 'Eval & observability', items: ['RAGAS', 'DeepEval', 'Langfuse'] },
-  { group: 'Languages', items: ['Python', 'SQL', 'JavaScript', 'HTML', 'CSS'] },
-  { group: 'Frameworks', items: ['FastAPI', 'Django', 'Flask', 'REST APIs'] },
-  { group: 'Data & infra', items: ['PostgreSQL', 'Redis', 'Vector databases', 'Docker', 'Git', 'CI/CD', 'Linux', 'Azure', 'AWS'] },
+  { group: 'AI frameworks & tools', items: ['LangGraph', 'LangChain', 'CrewAI', 'Microsoft Agent Framework', 'Letta', 'n8n', 'Hugging Face'] },
+  { group: 'AI techniques', items: ['RAG', 'Multi-agent systems', 'Human-in-the-loop', 'Prompt engineering', 'Fine-tuning (LoRA, QLoRA)'] },
+  { group: 'LLMs & platforms', items: ['Azure OpenAI', 'OpenAI', 'Claude', 'AWS Bedrock', 'Gemini', 'Llama', 'Qwen', 'Gemma'] },
+  { group: 'Evaluation & observability', items: ['LLM evaluation', 'RAGAS', 'DeepEval', 'Langfuse'] },
+  { group: 'Languages & frameworks', items: ['Python', 'SQL', 'FastAPI', 'Django', 'Flask', 'JavaScript', 'HTML', 'CSS'] },
+  { group: 'Data & infrastructure', items: ['PostgreSQL', 'pgvector', 'Redis', 'Docker', 'Git', 'CI/CD', 'Linux', 'Azure', 'AWS'] },
 ] as const;
 
+/** AI-102 leads: it is the associate-level one, and the only one that is
+    evidence rather than familiarity. */
 export const certifications = [
-  { body: 'Microsoft Azure', items: ['AZ-900 Fundamentals', 'AI-900 AI Fundamentals', 'AI-102 AI Engineer Associate'] },
-  { body: 'Amazon Web Services', items: ['Cloud Practitioner', 'AI Practitioner'] },
+  { body: 'Microsoft Azure', items: ['AI-102 AI Engineer Associate', 'AI-900 AI Fundamentals', 'AZ-900 Fundamentals'] },
+  { body: 'Amazon Web Services', items: ['AI Practitioner', 'Cloud Practitioner'] },
 ] as const;
 
 export const recognition = [
@@ -50,13 +62,26 @@ export const recognition = [
   'Customer Demo Recognition',
 ] as const;
 
+/**
+ * No percentages. The updated resume dropped them, and four years of shipped
+ * production systems is the stronger evidence — a grade next to that invites
+ * a comparison that helps nobody. `detail` is optional for the same reason.
+ */
 export const education = [
-  { award: 'MCA, Computer Science', place: 'University of Madras', detail: '75.7%' },
-  { award: 'BSc, Computer Science', place: 'AP Residential Degree College', detail: '62%' },
+  { award: 'MCA, Computer Applications', place: 'University of Madras (Distance Education)' },
+  { award: 'BSc, Computer Science', place: 'Andhra Pradesh Residential Degree College' },
 ] as const;
 
-export const nav = [
-  { href: '/experience', label: 'Experience' },
-  { href: '/#work', label: 'Work' },
+/**
+ * `match` is the path prefix that makes an item the current one, and it is
+ * separate from `href` because two of these links point at sections of the
+ * home page rather than at pages. Work is the case in point: its href is
+ * `/#work`, but a reader is "in" Work while reading any `/work/<slug>` case
+ * study, which is exactly when the nav should say so. Contact has no match
+ * because it is a section and nothing else — there is no page to be on.
+ */
+export const nav: ReadonlyArray<{ href: string; label: string; match?: string }> = [
+  { href: '/experience', label: 'Experience', match: '/experience' },
+  { href: '/#work', label: 'Work', match: '/work' },
   { href: '/#contact', label: 'Contact' },
-] as const;
+];

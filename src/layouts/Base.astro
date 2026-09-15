@@ -15,6 +15,14 @@ const {
   title = `${site.name} — ${site.role}`,
   description = site.blurb,
 } = Astro.props;
+
+/**
+ * Absolute, because every scraper resolves og:image against its own host, not
+ * against the page. One card for the whole site: no project defines a cover,
+ * so a per-page image would just be this one under six different names.
+ * Regenerate with `node scripts/make-og.mjs`.
+ */
+const ogImage = new URL('/og.png', Astro.site ?? Astro.url).href;
 ---
 <!doctype html>
 <html lang="en">
@@ -34,10 +42,23 @@ const {
     <meta name="theme-color" content="#0B0F15" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#EFF1EC" media="(prefers-color-scheme: light)" />
 
+    {/* `summary_large_image` was already declared here with no image to show,
+        which is the one combination that renders a blank card rather than
+        falling back to a small one. */}
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
+    <meta property="og:url" content={Astro.url.href} />
+    <meta property="og:site_name" content={site.fullName} />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${site.fullName} — ${site.role}. ${site.status}`} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
