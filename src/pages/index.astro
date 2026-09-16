@@ -28,11 +28,24 @@ function countWord(n: number): string {
           <span class="pulse" aria-hidden="true"></span>{site.status}
         </p>
 
-        {/* Kinetic type: each word rises from behind its own mask. */}
+        {/*
+          Kinetic type: each word rises from behind its own mask.
+
+          The space between masks is a real text node. It used to be a
+          `margin-left` on .msk, which meant h1.textContent read
+          "Ibuildagentsthat" — one nonsense word to a screen reader, to a
+          search engine, and to anyone copying the line. A margin also does
+          not collapse at a line break, so when the line wrapped the second
+          row was indented by that margin and the headline lost its left
+          edge. A space fixes both, and is a legitimate wrap opportunity.
+        */}
         <h1 class="kinetic">
           <span class="ln">
-            {['I', 'build', 'agents', 'that'].map((w, i) => (
-              <span class="msk"><i style={`--d:${120 + i * 65}ms`}>{w}</i></span>
+            {['I', 'build', 'agents', 'that'].map((w, i, all) => (
+              <Fragment>
+                <span class="msk"><i style={`--d:${120 + i * 65}ms`}>{w}</i></span>
+                {i < all.length - 1 && ' '}
+              </Fragment>
             ))}
           </span>
           <span class="ln">
@@ -207,8 +220,25 @@ function countWord(n: number): string {
   }
 
   h1 {
-    font-size: clamp(2.9rem, 8.5vw, 5.6rem);
+    /*
+      Sized against the column, not the viewport's idea of "big".
+
+      The hero copy column is ~626px even at 1920px — the shell caps at 82rem
+      and the grid then gives this side 1.15fr. Measured in the browser,
+      "I build agents that" occupies 7.08em, so it needs the font at or under
+      88.5px to fit that column; the old 8.5vw/5.6rem ceiling put it at 89.6px
+      and the line wrapped. The binding case is not the widest screen but
+      ~1024px, where the two-column grid has just kicked in and the column is
+      only 495px: that caps the font at 70px, which 6.6vw respects.
+
+      If this line is ever reworded, re-measure. The whole hero depends on one
+      string fitting one column.
+    */
+    font-size: clamp(2.5rem, 6.6vw, 5.4rem);
     letter-spacing: -.045em;
+    /* 1.02 from the global heading rule is display leading for a single line.
+       Across two it closes the gap to almost nothing. */
+    line-height: 1.06;
   }
 
   /* --- kinetic type --- */
@@ -229,7 +259,8 @@ function countWord(n: number): string {
     margin-bottom: -.1em;
   }
 
-  .kinetic .msk + .msk { margin-left: .26em; }
+  /* The gap between words is a real space in the markup now — see the comment
+     on the h1. Nothing to add here, and a margin would double it. */
 
   .kinetic i {
     display: inline-block;
