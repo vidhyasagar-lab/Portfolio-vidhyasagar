@@ -27,16 +27,18 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
     <p class="tagline glass-dim">{tagline}</p>
   </header>
 
-  {outcomes.length > 0 && (
-    <dl class="outcomes">
-      {outcomes.map((o) => (
-        <div>
-          <dt>{o.metric}</dt>
-          <dd class="glass-dim">{o.label}</dd>
-        </div>
-      ))}
-    </dl>
-  )}
+  {/* Always rendered, even when empty: the card subgrids onto the page grid so
+      that metrics and chips line up across a row, and that needs every card to
+      have the same four children. `data-empty` drops the rule and padding so an
+      outcome-less card shows a blank band rather than a stray line. */}
+  <dl class="outcomes" data-empty={outcomes.length === 0}>
+    {outcomes.map((o) => (
+      <div>
+        <dt>{o.metric}</dt>
+        <dd class="glass-dim">{o.label}</dd>
+      </div>
+    ))}
+  </dl>
 
   <ul class="stack">
     {stack.slice(0, 5).map((s) => <li class="mono">{s}</li>)}
@@ -76,6 +78,48 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
     transition: transform .45s cubic-bezier(.22,.68,.28,1),
                 box-shadow .45s cubic-bezier(.22,.68,.28,1),
                 border-color .35s;
+  }
+
+  /*
+    Cross-card alignment.
+
+    The role line wraps to two or three lines depending on how long the role
+    string happens to be, and in a flex column every band below it inherits
+    that drift: measured at 1440px, the metric rows sat 18px apart and the
+    stack chips 33px apart. Only the footer held, because it has margin-top:
+    auto. Subgrid hands the card's four rows to the page grid, so every card
+    in a row shares one set of row heights and the bands line up by
+    construction rather than by the roles happening to be the same length.
+
+    Guarded twice: @supports because a browser without subgrid must keep the
+    flex column, and the media query because below 44rem the grid is a single
+    column and there is nothing to align against.
+  */
+  @supports (grid-template-rows: subgrid) {
+    @media (min-width: 44rem) {
+      .card {
+        display: grid;
+        grid-template-rows: subgrid;
+        /* Six bands: role, title, tagline, metrics, stack, footer. */
+        grid-row: span 6;
+        /* A subgrid inherits the parent's gap; state it so the rhythm inside
+           a card stays the card's, not the grid's. */
+        row-gap: 1.15rem;
+      }
+
+      /* The header nests a second subgrid so the three bands it holds line up
+         too. Without this the titles still sat ~12px apart whenever the role
+         above them wrapped to a different number of lines. */
+      .card > header {
+        grid-row: span 3;
+        grid-template-rows: subgrid;
+        row-gap: .45rem;
+      }
+
+      /* Subgrid pins the footer to the last row — the auto margin would now
+         fight it. */
+      .card > footer { margin-top: 0; }
+    }
   }
 
   .card:hover,
@@ -124,11 +168,16 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
   .outcomes {
     display: flex;
     flex-wrap: wrap;
+    /* Subgrid stretches these to the row height, which a wrapping flex
+       container would otherwise use to space its lines apart. */
+    align-content: start;
     gap: .35rem 1.75rem;
     margin: 0;
     padding: .9rem 0 0;
     border-top: 1px solid color-mix(in srgb, var(--glass-ink) 14%, transparent);
   }
+
+  .outcomes[data-empty="true"] { border-top: 0; padding-top: 0; }
 
   .outcomes div { display: grid; gap: .1rem; }
 
@@ -151,6 +200,7 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
   .stack {
     display: flex;
     flex-wrap: wrap;
+    align-content: start;
     gap: .35rem;
     list-style: none;
     margin: 0;
