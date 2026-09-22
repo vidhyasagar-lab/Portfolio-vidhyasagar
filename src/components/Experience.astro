@@ -173,13 +173,13 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
     font-size: .75rem;
     line-height: 1.35;
     color: var(--ink-3);
-    max-width: 15ch;
+    max-width: 9.15em;  /* 15ch x .610 */
   }
 
   /* --- level 3: body --- */
 
   .summary {
-    max-width: 58ch;
+    max-width: 35.38em;  /* 58ch x .610 */
     color: var(--ink-2);
     font-size: 1.02rem;
     line-height: 1.6;
@@ -196,7 +196,7 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
     padding: 0;
     display: grid;
     gap: .6rem;
-    max-width: 66ch;
+    max-width: 40.26em;  /* 66ch x .610 */
   }
 
   .facts li {

@@ -277,7 +277,8 @@ function countWord(n: number): string {
   }
 
   .lede {
-    max-width: 46ch;
+    /* 46ch x .610 — see --measure in global.css for why this is not `ch`. */
+    max-width: 28.06em;
     font-size: clamp(1.02rem, 1.7vw, 1.2rem);
     line-height: 1.62;
     color: var(--ink-2);
@@ -309,7 +310,16 @@ function countWord(n: number): string {
 
   .block-head h2 {
     font-size: clamp(1.9rem, 4.4vw, 3rem);
-    max-width: 20ch;
+    max-width: 11.88em;  /* 20ch x .594, display face */
+    /*
+      Every one of these headings sets two lines in Bricolage. A single
+      size-adjust matches average width, not any particular string, so a
+      heading sitting near a wrap boundary can still fall to one line in the
+      fallback and drop the page 49px when the webfont lands. Reserving the
+      two lines makes the box independent of which font is measuring it.
+      A floor, so narrow screens are free to use three.
+    */
+    min-height: 2.04em;  /* 2 lines at the 1.02 heading line-height */
   }
 
   .grid {
@@ -417,7 +427,7 @@ function countWord(n: number): string {
   .contact .mono-label { color: var(--glass-ink-2); }
 
   .contact-lede {
-    max-width: 48ch;
+    max-width: 29.28em;  /* 48ch x .610 */
     font-size: 1.05rem;
     line-height: 1.65;
   }

@@ -1,6 +1,58 @@
 @import "tailwindcss";
 
 /* ============================================================
+   FALLBACK METRICS
+   Bricolage is ~20% narrower than Arial at the same size, so
+   while the webfont was loading the hero headline set two lines
+   instead of one, and when it arrived the extra line vanished
+   and the whole page jumped up 214px. Measured: median CLS 0.071
+   on the home page, worst 0.35, against 0.0004 everywhere else.
+
+   These numbers are measured, not guessed — canvas measureText
+   over the fourteen strings this face actually sets on the site.
+   The per-string ratio spans 78.5%–81.2%, so one size-adjust
+   genuinely fits the whole face. Re-measure if the display font
+   changes; `scripts/` has no generator for this, it was a one-off.
+
+   The trade-off: if Bricolage fails to load entirely, headings
+   render at 80% of their intended size rather than at Arial's
+   natural width. Stable layout is worth more than exact size on
+   the rare load where the font never arrives.
+   ============================================================ */
+
+@font-face {
+  font-family: "Bricolage Fallback";
+  /* Liberation Sans is the metric-compatible Arial stand-in on Linux. */
+  src: local("Arial"), local("Helvetica Neue"), local("Liberation Sans");
+  size-adjust: 80.12%;
+  /* Expressed against the adjusted em, so they restore Bricolage's own
+     93%/27% line box rather than Arial's taller 110%/31%. */
+  ascent-override: 116.08%;
+  descent-override: 33.70%;
+  line-gap-override: 0%;
+}
+
+/*
+  The body face needed it too, which was not obvious: Manrope is only 2.8%
+  wider than Arial, and the first measurement — taken over headline strings —
+  suggested it could be left alone. Measured over the thirteen real paragraphs
+  on the page instead, that 2.8% is enough to push the hero lede onto an extra
+  line, which moved everything below it by 31px. Spread is 101.7%–105.0%.
+
+  Pinning to Arial also removes a second variable: the stack previously fell
+  through to system-ui, which is a different face on every platform, so the
+  shift differed per visitor.
+*/
+@font-face {
+  font-family: "Manrope Fallback";
+  src: local("Arial"), local("Helvetica Neue"), local("Liberation Sans");
+  size-adjust: 102.78%;
+  ascent-override: 103.72%;
+  descent-override: 29.19%;
+  line-gap-override: 0%;
+}
+
+/* ============================================================
    TOKENS
    Light palette lives on bare :root. Dark redefines ONLY tokens,
    twice: once for system preference (guarded so an explicit light
@@ -59,12 +111,28 @@
   --vignette: rgba(110, 124, 136, .20);
 
   /* --- type --- */
-  --f-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
-  --f-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* "Bricolage Fallback" is the metric-matched stand-in defined above; the
+     plain names after it still catch the case where no local face resolves. */
+  --f-display: "Bricolage Grotesque", "Bricolage Fallback", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Manrope", "Manrope Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 
   /* --- rhythm --- */
-  --measure: 66ch;
+  /*
+    Measure in `em`, not `ch`, and this is deliberate everywhere on the site.
+
+    `ch` resolves against the advance width of the "0" glyph, which is one
+    glyph and therefore something `size-adjust` cannot match: tuned to average
+    text width, it still leaves Manrope's "0" at .610em against the fallback's
+    .572em, and Bricolage's at .594em against .446em. So every `ch` box
+    silently narrowed while the webfont loaded — the hero lede lost 34px of
+    width, wrapped onto a seventh line, and pushed the page down 31px.
+
+    66ch x .610 = 40.26em. `em` tracks font-size, so the fluid type scale
+    still works, and the box no longer depends on which font is loaded.
+    Body ratio .610, display ratio .594; re-measure if either face changes.
+  */
+  --measure: 40.26em;
   --pad: clamp(1.25rem, 4vw, 3rem);
   --rail: clamp(1rem, 5vw, 5rem);
 }

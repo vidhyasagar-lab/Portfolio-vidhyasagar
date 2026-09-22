@@ -19,5 +19,6 @@ research-report.html
 *.pdf
 resume.txt
 
-# ...but the site's own CV download, if one is ever added, must still ship.
+# ...but the site's own CV download has to ship. Update it by copying the
+# export over this path — an export added under its own name stays ignored.
 !public/cv.pdf

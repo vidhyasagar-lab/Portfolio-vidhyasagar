@@ -94,7 +94,7 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
 
   .desc {
     margin-top: .35rem;
-    max-width: 54ch;
+    max-width: 32.94em;  /* 54ch x .610 */
     font-size: .97rem;
     line-height: 1.6;
     color: var(--ink-2);
@@ -124,6 +124,6 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
     font-size: .7rem;
     line-height: 1.35;
     color: var(--ink-3);
-    max-width: 13ch;
+    max-width: 7.93em;  /* 13ch x .610 */
   }
 </style>
