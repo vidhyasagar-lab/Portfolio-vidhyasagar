@@ -14,10 +14,26 @@ export const site = {
   email: 'vidhyasagar54321@gmail.com',
   github: 'https://github.com/vidhyasagar-lab',
   linkedin: 'https://www.linkedin.com/in/kokirala-vidhyasagar',
-  /** Eyebrow above the hero. Deliberately states the specialism, not
-      availability: the site gets shared with colleagues, not only recruiters. */
+  /** Eyebrow above the hero. States the specialism; availability is a separate
+      string below so the two can be shown, reworded or removed independently. */
   status: 'RAG · Multi-agent systems · LLM evaluation',
 } as const;
+
+/**
+ * Availability notice, rendered in three places: the hero eyebrow, the contact
+ * block, and the CV masthead.
+ *
+ * It lives here as one string on purpose. This site is linked from a LinkedIn
+ * profile and from the Portfolio link inside the CV PDF, and it lists a current
+ * employer on the same page, so the day this needs to come down it needs to
+ * come down everywhere at once: set it to `null` and all three disappear.
+ *
+ * Deliberately NOT in the Open Graph card (public/og.png). That image is what
+ * renders when anyone — including a colleague — shares the link in a chat or a
+ * post, which makes it the most broadcast surface on the site. Regenerate
+ * og.png only if that is the intent.
+ */
+export const availability: string | null = 'Open to AI Engineer roles';
 
 /**
  * The downloadable CV, served verbatim from the resume export. Replace

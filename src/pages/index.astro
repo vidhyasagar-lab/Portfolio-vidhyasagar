@@ -4,7 +4,7 @@ import Base from '../layouts/Base.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import EvalConsole from '../components/EvalConsole.astro';
 import ExperienceCompact from '../components/ExperienceCompact.astro';
-import { site, cv, cvFilename } from '../site';
+import { site, cv, cvFilename, availability } from '../site';
 
 const projects = (await getCollection('projects', ({ data }) => !data.draft))
   .sort((a, b) => a.data.order - b.data.order);
@@ -24,8 +24,12 @@ function countWord(n: number): string {
 
     <div class="shell hero-grid">
       <div class="hero-copy">
-        <p class="mono-label rise" style="animation-delay:.05s">
-          <span class="pulse" aria-hidden="true"></span>{site.status}
+        {/* Availability and specialism are two separate claims, so they get two
+            separate elements rather than one run-on line: the chip can be
+            removed from site.ts without touching the positioning line. */}
+        <p class="eyebrow rise" style="animation-delay:.05s">
+          {availability && <span class="avail">{availability}</span>}
+          <span class="mono-label">{site.status}</span>
         </p>
 
         {/*
@@ -159,6 +163,7 @@ function countWord(n: number): string {
           If you're building something where model reliability actually matters, I'd like to hear
           about it — including the parts that aren't working yet.
         </p>
+        {availability && <p><span class="avail">{availability}</span></p>}
         <div class="cta">
           <a class="btn-primary" href={`mailto:${site.email}`}>{site.email}</a>
           <a class="btn-ghost" href={site.github} rel="noopener noreferrer" target="_blank">GitHub</a>
@@ -202,21 +207,12 @@ function countWord(n: number): string {
   .hero-copy > *,
   .panel-wrap { pointer-events: auto; }
 
-  .pulse {
-    display: inline-block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--accent);
-    margin-right: .55rem;
-    vertical-align: middle;
-    box-shadow: 0 0 0 0 var(--accent-glow);
-    animation: ping 2.6s ease-out infinite;
-  }
-
-  @keyframes ping {
-    0%   { box-shadow: 0 0 0 0 var(--accent-glow); }
-    70%  { box-shadow: 0 0 0 9px transparent; }
-    100% { box-shadow: 0 0 0 0 transparent; }
+  /* Wraps to two lines on a narrow screen rather than shrinking the chip. */
+  .eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .55rem .8rem;
   }
 
   h1 {

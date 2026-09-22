@@ -310,6 +310,55 @@ img { max-width: 100%; height: auto; display: block; }
   transition-duration: .06s;
 }
 
+/* --- AVAILABILITY ------------------------------------------
+   One component because the notice appears on the home hero, in
+   the contact block and on the CV masthead, from one string in
+   site.ts. The status dot carries the meaning here rather than
+   sitting next to a list of specialisms, where it signalled
+   nothing in particular.
+   ----------------------------------------------------------- */
+
+.avail {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .32rem .75rem .32rem .65rem;
+  border-radius: 999px;
+  font-family: var(--f-mono);
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.avail::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  /* A flex item shrinks by default, and a 6px dot has nothing to spare. */
+  flex: none;
+  box-shadow: 0 0 0 0 var(--accent-glow);
+  animation: ping 2.6s ease-out infinite;
+}
+
+@keyframes ping {
+  0%   { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70%  { box-shadow: 0 0 0 9px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* On glass the accent tint has to hold against a blurred backdrop. */
+.glass .avail {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
 /* --- GLASS -------------------------------------------------
    Four rules, enforced here so no component can opt out:
    1. opacity floor  -> --glass-bg is never pure alpha white

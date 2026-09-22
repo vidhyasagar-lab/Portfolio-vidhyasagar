@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Experience from '../components/Experience.astro';
-import { site, cv, cvFilename, summary, skills, certifications, recognition, education } from '../site';
+import { site, cv, cvFilename, availability, summary, skills, certifications, recognition, education } from '../site';
 
 const sections = [
   { id: 'summary', label: 'Summary' },
@@ -27,6 +27,10 @@ const sections = [
       <p class="title rise" style="animation-delay:.2s">
         {site.role} <span class="sep">/</span> {site.location}
       </p>
+
+      {availability && (
+        <p class="rise" style="animation-delay:.24s"><span class="avail">{availability}</span></p>
+      )}
 
       <div class="acts rise" style="animation-delay:.28s">
         <a class="btn-primary" href={cv} download={cvFilename}>Download CV</a>
