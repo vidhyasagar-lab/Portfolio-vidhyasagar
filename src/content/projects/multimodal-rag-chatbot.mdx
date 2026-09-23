@@ -6,11 +6,11 @@ period: "2026"
 stack: ["Python", "FastAPI", "Azure OpenAI", "FAISS", "BM25", "RAGAS", "Langfuse", "LangChain", "PyMuPDF", "Next.js", "SQLite", "Docker"]
 # The branch, not the repo root. `main` is sixteen commits behind and still
 # holds the server-rendered UI this case study says was removed — a reader who
-# lands there finds a codebase that contradicts the page. Point at the branch
-# that is actually deployed, and say so in the label rather than letting
-# "View source" imply the default branch.
+# lands there finds a codebase that contradicts the page, so the link goes
+# straight to the branch that is actually deployed. Deliberately no
+# `repoLabel`: the button reads "View source" and the branch shows in the URL
+# and in GitHub's own header once you arrive.
 repo: "https://github.com/vidhyasagar-lab/RAG_Chatbot/tree/headless-api"
-repoLabel: "View source — headless-api"
 live: "https://chatbot-ui-gules-psi.vercel.app/"
 problem: "Most RAG systems throw away everything that is not a paragraph. The flowchart that actually explains the process gets dropped on the floor, and nobody notices, because the system answers confidently anyway."
 # Deliberately no `cover`: the article carries its own diagrams, and a hero
