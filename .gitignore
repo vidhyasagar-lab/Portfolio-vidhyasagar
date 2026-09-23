@@ -10,6 +10,11 @@ dist/
 # Working document, not part of the site
 research-report.html
 
+# Raw screenshot drops. The cropped, named copies under public/shots/ are what
+# the site serves; these are the originals they were cut from and would ship a
+# second megabyte of the same pixels.
+chatbot-images/
+
 # Source resume + extracted text: contain a phone number. Never commit.
 # The PDF was missing from this list while a resume PDF sat in the repo root,
 # so `git add .` would have published a phone number. Match the format, not

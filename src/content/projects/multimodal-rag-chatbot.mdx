@@ -1,22 +1,103 @@
 ---
 title: "Multimodal RAG"
-tagline: "A document chatbot that reads the pictures too — flowcharts, tables and architecture diagrams are described by a vision model, indexed as text, and retrieved alongside the prose. Every answer is scored before it reaches the screen."
-role: "Sole engineer — ingestion, retrieval, eval gating, auth, security audit"
+tagline: "A document chatbot that reads the pictures too — flowcharts, tables and architecture diagrams are described by a vision model, indexed as text, and retrieved alongside the prose. Every answer is scored against its own sources while you read it, and a failing one is retracted on screen."
+role: "Sole engineer — ingestion, retrieval, eval gating, streaming, auth, deployment"
 period: "2026"
-stack: ["Python", "FastAPI", "Azure OpenAI", "FAISS", "BM25", "RAGAS", "Langfuse", "LangChain", "PyMuPDF", "HTMX", "SQLite"]
-# Points straight at the repo. Note it is currently private, so a visitor
-# without access lands on GitHub's 404 — make the repo public for this link to
-# resolve for anyone.
-repo: "https://github.com/vidhyasagar-lab/RAG_Chatbot"
+stack: ["Python", "FastAPI", "Azure OpenAI", "FAISS", "BM25", "RAGAS", "Langfuse", "LangChain", "PyMuPDF", "Next.js", "SQLite", "Docker"]
+# The branch, not the repo root. `main` is sixteen commits behind and still
+# holds the server-rendered UI this case study says was removed — a reader who
+# lands there finds a codebase that contradicts the page. Point at the branch
+# that is actually deployed, and say so in the label rather than letting
+# "View source" imply the default branch.
+repo: "https://github.com/vidhyasagar-lab/RAG_Chatbot/tree/headless-api"
+repoLabel: "View source — headless-api"
+live: "https://chatbot-ui-gules-psi.vercel.app/"
 problem: "Most RAG systems throw away everything that is not a paragraph. The flowchart that actually explains the process gets dropped on the floor, and nobody notices, because the system answers confidently anyway."
-shots: []
+# Deliberately no `cover`: the article carries its own diagrams, and a hero
+# screenshot above them would compete with the first one.
+#
+# These are the client's public pages, captured from the deployment linked
+# above. They are the product's own account of itself, which is why the
+# quality-gate shot is the one worth reading: it is the same argument the
+# article makes, made in the interface.
+shots:
+  - src: "/shots/verity/01-hero.png"
+    alt: "Verity landing page: the headline 'Answers from your documents. Checked before you read them.' beside a chat panel showing an answer with numbered citations and a Verified 0.94 badge"
+    caption: "The claim the whole system has to earn."
+    title: "Checked before you read them"
+    description: "The panel on the right is the product in one frame: an answer, the two documents it drew on with page and table references, and the faithfulness score the quality gate gave it. Every one of those three is a thing this project exists to produce."
+    width: 1360
+    height: 780
+  - src: "/shots/verity/02-how-it-works.png"
+    alt: "Three cards headed Upload, Ask and Checked, describing ingestion, hybrid search and RAGAS scoring"
+    caption: "Upload, ask, checked - and the third is the point."
+    title: "Three steps, and the last one is the one that matters"
+    description: "Upload names what the ingestion pipeline is for: charts, tables and diagrams are read by a vision model so answers can come from figures rather than only prose. Ask is the hybrid dense-plus-sparse retrieval. Checked is the gate, and putting it third in the user's own mental model is the whole argument of the project."
+    width: 1200
+    height: 822
+  - src: "/shots/verity/03-quality-gate.png"
+    alt: "A rejected draft shown struck through with the note 'Draft rejected by the quality gate: faithfulness 0.31 < 0.75', and beneath it a rewritten answer with citations and a Verified 0.91 badge"
+    caption: "A rejected answer, and its replacement, both on screen."
+    title: "When an answer isn't supported, you see it fail"
+    description: "This is the interface half of the trade described in the case study. The draft that scored 0.31 against a 0.75 threshold is not silently swapped out - it stays visible, struck through, with the score that condemned it, and the rewrite streams underneath. It costs the reader some confusion and buys them the ability to calibrate how far to trust the next answer."
+    width: 1360
+    height: 563
+  - src: "/shots/verity/04-sign-in.png"
+    alt: "Verity sign-in screen with username and password fields"
+    caption: "Sign-in, and the reason it exists."
+    title: "The door"
+    description: "Accounts are not decoration here. Identity comes only from a signed cookie, every document is scoped to its owner, logins lock out after five failed attempts, and the per-account quota - 25 answers, 2 document slots - is what keeps a public demo on a 2 GB box from becoming an open Azure bill."
+    width: 1360
+    height: 780
+  - src: "/shots/verity/05-answer.png"
+    alt: "The Verity chat answering a question about risk exposure with three bulleted findings, two source chips one of which is tagged 'table', and a Verified 1.00 badge"
+    caption: "A real answer, scored 1.00 against its own sources."
+    title: "The answer, and the receipts"
+    description: "Three risks, each with its exposure figure and mitigation owner, and no sentence spent on where they came from - the source chips do that job, and one of them is tagged 'table', meaning that answer was assembled partly from a table the vision model transcribed rather than from prose. The badge is the faithfulness score the gate assigned before this was allowed to stand."
+    width: 1361
+    height: 631
+  - src: "/shots/verity/06-admin-overview.png"
+    alt: "Admin overview showing 1 document, 204 chunks, 49 figures, 205 vectors indexed, 2 accounts, a completed evaluation and spend of $0.21"
+    caption: "The whole system, in numbers."
+    title: "204 chunks, 49 figures"
+    description: "The figure count is the one to read. A single uploaded document yielded 49 separate visual elements - charts, tables and diagrams - each sent to a vision model, described, and indexed as searchable text. The 204 chunks include those descriptions, which is exactly the point: once a flowchart has been turned into prose, it retrieves like prose. The argument for multimodal ingestion, stated as a measurement rather than a claim."
+    width: 1355
+    height: 629
+  - src: "/shots/verity/07-evaluations.png"
+    alt: "Admin evaluations page listing one completed run over 12 pairs with faithfulness 1.00, relevancy 0.30, precision 0.80, recall 0.42"
+    caption: "Batch evaluation over the golden set."
+    title: "Test every answer, all at once"
+    description: "The per-answer gate scores one reply at a time. This scores the whole golden set in a run, on four metrics - the three that can be computed live plus context recall, which needs ground truth and so cannot. The numbers here are the project's own report card, published unretouched."
+    width: 1358
+    height: 635
+  - src: "/shots/verity/08-evaluation-run.png"
+    alt: "A single evaluation run expanded: overall 0.63, faithfulness 1.00, relevancy 0.30, precision 0.80, recall 0.42, with a per-question table beneath"
+    caption: "One run, broken down question by question."
+    title: "Where the score actually comes from"
+    description: "Faithfulness 1.00 against relevancy 0.30 is the diagnosis in one line: the answers are entirely grounded in what was retrieved, and what was retrieved often was not what the question needed. That is a retrieval problem, not a generation problem, and it is exactly the split these four metrics exist to expose."
+    width: 1348
+    height: 639
+  - src: "/shots/verity/09-usage.png"
+    alt: "Admin usage page showing spend of $0.21 across 34 traces, with a table of recent traces carrying cost and latency per answer"
+    caption: "Cost and latency, per answer."
+    title: "What each answer costs"
+    description: "Every question becomes a Langfuse trace tagged with the path it took - rag-chat-streamed-gated, eval-gated, rag - and carries its own cost and latency. A gated answer here lands in 16 to 29 seconds for a third of a cent. Running a public demo on free-tier hardware means knowing that number rather than guessing it."
+    width: 1337
+    height: 639
+  - src: "/shots/verity/10-users.png"
+    alt: "Admin users page listing two accounts with their roles, document counts and chunk counts"
+    caption: "Accounts, roles, and what each one holds."
+    title: "People with access"
+    description: "Role changes and deletion live here, and deleting a user removes their documents with them. The chunk count beside each account is what the per-user quota is really bounding: not requests, but how much of a 2 GB machine any one person can occupy."
+    width: 1360
+    height: 637
 outcomes:
   - metric: "6"
     label: "content types indexed, not just text"
-  - metric: "3"
-    label: "RAGAS metrics on every answer"
-  - metric: "40"
-    label: "tests across four suites"
+  - metric: "3.8s"
+    label: "to first token, with the gate still on"
+  - metric: "143"
+    label: "tests across fourteen suites"
 featured: true
 order: 3
 ---
@@ -265,23 +346,23 @@ def test_corrupt_sidecar_does_not_crash_startup(store):
 
 A corrupt sidecar should cost you retrieval quality, not the ability to start the process.
 
-## Checking the answer before showing it
+## Checking the answer, in the open
 
 The part I would keep if I had to throw the rest away.
 
 RAG's failure mode is not returning nothing. It is returning something plausible that the
-retrieved context does not actually support. So before the answer reaches the browser, it is
-scored against its own context — and if it fails, it is thrown away and rewritten.
+retrieved context does not actually support. So every answer is scored against its own context
+— and one that fails is retracted on screen and rewritten in front of you.
 
 The gate metric is RAGAS **faithfulness**: decompose the answer into claims, check each claim
 against the retrieved chunks, report the fraction supported. Below the configured threshold,
 the answer is regenerated with a stricter system prompt and a slightly colder temperature.
 
 <Diagram
-  label="Eval-gated query path. A question goes to hybrid search, which runs dense and sparse retrieval and fuses them. Answer generation and the context precision metric then run concurrently in a single asyncio gather, because context precision does not need the answer. The generated answer goes through a faithfulness gate: at or above the threshold it is sent as generated, below it the answer is regenerated with a stricter prompt, re-checked, and whichever version scored higher is the one sent. After the answer is sent, the full three-metric RAGAS evaluation runs in a background thread and pushes its scores to Langfuse."
-  caption="The dashed bracket is one asyncio.gather: the quality check of the retrieved context costs no wall-clock time at all."
+  label="Eval-gated query path. A question goes to hybrid search, which runs dense and sparse retrieval and fuses them. The draft answer is streamed to the reader as the model produces it, so the reader has text from that point on. Only then does the quality gate run: faithfulness and context precision are scored concurrently with each other, since both need the finished answer. The verdict has four values. Passed, unscored and retrieval-failed all keep the draft; only a rejected verdict regenerates, and the replacement is streamed too rather than being scored again inline. After the answer is finished, the full three-metric RAGAS evaluation runs in a background thread and pushes its scores back onto the original Langfuse trace."
+  caption="The gate sits after the reader has the text, not between them. That single reordering is the whole latency fix."
 >
-<svg viewBox="0 0 760 600" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 760 610" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="rq-arrow" viewBox="0 0 10 10" refX="9" refY="5"
       markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -289,132 +370,181 @@ the answer is regenerated with a stricter system prompt and a slightly colder te
     </marker>
   </defs>
 
-  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#rq-arrow)">
-    <path d="M380,56 V86" />
-    <path d="M380,128 V150 H195 V170" />
-    <path d="M380,128 V150 H565 V170" />
-    <path d="M195,212 V254 H360 V274" />
-    <path d="M565,212 V254 H400 V274" />
-    <path d="M380,316 V452" />
-    <path d="M480,295 H625 V356" />
-    <path d="M625,398 V473 H480" />
+  {/* Fan stem and bars carry no marker — only segments arriving at a box do. */}
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4">
+    <path d="M380,200 V214" />
+    <path d="M195,214 H565" />
+    <path d="M195,278 V306" />
+    <path d="M565,278 V306" />
+    <path d="M195,306 H565" />
   </g>
 
-  {/* Background work, dashed: the user already has their answer by now. */}
-  <path d="M380,494 V536" fill="none" stroke="var(--line-strong)" stroke-width="1.4"
+  <g fill="none" stroke="var(--line-strong)" stroke-width="1.4" marker-end="url(#rq-arrow)">
+    <path d="M380,56 V86" />
+    <path d="M380,128 V158" />
+    <path d="M195,214 V236" />
+    <path d="M565,214 V236" />
+    <path d="M380,306 V322" />
+    <path d="M380,364 V470" />
+    <path d="M480,343 H625 V400" />
+    <path d="M625,442 V491 H482" />
+  </g>
+
+  {/* Background work, dashed: the reader finished reading a while ago. */}
+  <path d="M380,512 V554" fill="none" stroke="var(--line-strong)" stroke-width="1.4"
     stroke-dasharray="5 4" marker-end="url(#rq-arrow)" />
 
-  {/* The superstep bracket. Both boxes inside it start together. */}
-  <rect x="86" y="156" width="588" height="70" rx="12" fill="none"
+  {/* The gate bracket. Both metrics need the answer, so neither can overlap
+      generation — but they do overlap each other. */}
+  <rect x="86" y="222" width="588" height="70" rx="12" fill="none"
     stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="5 4" />
 
   <g font-family="var(--f-mono)" font-size="13" fill="var(--ink)" text-anchor="middle">
+    {/* Blue reads, teal measures, violet rewrites, green is what the reader
+        actually has. Fills mix into --surface so each holds on both grounds. */}
+
     <g fill="color-mix(in srgb, #5B8DEF 14%, var(--surface))"
       stroke="color-mix(in srgb, #5B8DEF 58%, var(--line-strong))" stroke-width="1.3">
       <rect x="290" y="14" width="180" height="42" rx="9" />
       <rect x="290" y="86" width="180" height="42" rx="9" />
     </g>
 
-    <g fill="color-mix(in srgb, #8B7CF6 14%, var(--surface))"
-      stroke="color-mix(in srgb, #8B7CF6 58%, var(--line-strong))" stroke-width="1.3">
-      <rect x="100" y="170" width="190" height="42" rx="9" />
-      <rect x="530" y="356" width="190" height="42" rx="9" />
-    </g>
-
     <g fill="color-mix(in srgb, #2DB4A0 14%, var(--surface))"
       stroke="color-mix(in srgb, #2DB4A0 58%, var(--line-strong))" stroke-width="1.3">
-      <rect x="470" y="170" width="190" height="42" rx="9" />
-      <rect x="250" y="536" width="260" height="42" rx="9" />
+      <rect x="100" y="236" width="190" height="42" rx="9" />
+      <rect x="470" y="236" width="190" height="42" rx="9" />
+      <rect x="250" y="554" width="260" height="42" rx="9" />
+    </g>
+
+    <rect x="530" y="400" width="190" height="42" rx="9"
+      fill="color-mix(in srgb, #8B7CF6 14%, var(--surface))"
+      stroke="color-mix(in srgb, #8B7CF6 58%, var(--line-strong))" stroke-width="1.3" />
+
+    <g fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
+      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3">
+      <rect x="250" y="158" width="260" height="42" rx="9" />
+      <rect x="280" y="470" width="200" height="42" rx="9" />
     </g>
 
     {/* The gate. Heavier, in the accent, because it is the one node that can
-        reject work the rest of the pipeline already paid for. */}
-    <rect x="280" y="274" width="200" height="42" rx="9"
+        retract work the reader has already started reading. */}
+    <rect x="280" y="322" width="200" height="42" rx="9"
       fill="color-mix(in srgb, var(--accent) 16%, var(--surface))"
       stroke="var(--accent)" stroke-width="2" />
 
-    <rect x="280" y="452" width="200" height="42" rx="9"
-      fill="color-mix(in srgb, #3FB950 14%, var(--surface))"
-      stroke="color-mix(in srgb, #3FB950 58%, var(--line-strong))" stroke-width="1.3" />
-
     <text x="380" y="41">question</text>
     <text x="380" y="113">hybrid_search</text>
-    <text x="195" y="197">generate answer</text>
-    <text x="565" y="197">context_precision</text>
-    <text x="380" y="301" fill="var(--accent)">faithfulness gate</text>
-    <text x="625" y="383">regenerate, stricter</text>
-    <text x="380" y="479">send to the browser</text>
-    <text x="380" y="563">RAGAS ×3 → Langfuse</text>
+    <text x="380" y="185">stream the draft</text>
+    <text x="195" y="263">faithfulness</text>
+    <text x="565" y="263">context_precision</text>
+    <text x="380" y="349" fill="var(--accent)">verdict</text>
+    <text x="625" y="427">regenerate, stricter</text>
+    <text x="380" y="497">done</text>
+    <text x="380" y="581">RAGAS ×3 → Langfuse</text>
   </g>
 
   <g font-family="var(--f-mono)" font-size="10.5" fill="var(--ink-3)">
-    <text x="380" y="244" text-anchor="middle" fill="var(--accent)">one asyncio.gather — precision needs no answer</text>
-    <text x="392" y="344" text-anchor="start">≥ threshold</text>
-    <text x="516" y="288" text-anchor="middle">below</text>
-    <text x="616" y="440" text-anchor="end">re-checked; better score wins</text>
-    <text x="392" y="522" text-anchor="start">background thread</text>
+    <text x="522" y="178" text-anchor="start">the reader has text</text>
+    <text x="522" y="194" text-anchor="start">from here on</text>
+    {/* Inside the bracket, in the gap between the two metric boxes. Below it
+        the label lands on the bracket's own dashed edge and stops being
+        readable. */}
+    <text x="380" y="256" text-anchor="middle" fill="var(--accent)">both need</text>
+    <text x="380" y="270" text-anchor="middle" fill="var(--accent)">the answer</text>
+    <text x="552" y="337" text-anchor="middle">rejected</text>
+    <text x="530" y="392" text-anchor="end">not re-scored inline</text>
+    <text x="392" y="458" text-anchor="start">passed · unscored · retrieval failed</text>
+    <text x="392" y="540" text-anchor="start">background thread</text>
   </g>
 </svg>
 </Diagram>
 
-Two decisions inside that gate are the ones I would defend in a review.
+Three decisions inside that gate are the ones I would defend in a review.
 
-**Context precision runs for free.** It scores whether the retrieved chunks were relevant to
-the question — which means it needs the question and the contexts, and *not* the answer. So it
-does not have to wait for generation:
-
-```python
-gen_task = asyncio.ensure_future(_async_generate_answer(async_client, messages, settings))
-ctx_prec_task = asyncio.ensure_future(
-    asyncio.to_thread(evaluate_context_precision_sync, question, context_chunks)
-)
-(answer, usage), context_precision = await asyncio.gather(gen_task, ctx_prec_task)
-```
-
-An entire quality metric, computed at zero wall-clock cost, because it was scheduled against
-the one operation already known to be slow. Finding the metric whose dependencies let it start
-early is most of what "optimising" a pipeline like this means.
-
-**A failed retry does not force the worse answer through.** The regenerated answer is scored
-too, and kept if it passed *or* if it simply scored higher than the original:
+**The verdict has four values, not two.** A low faithfulness score does not mean the model made
+something up. It can also mean retrieval handed it nothing to be faithful *to* — and
+regenerating against the same empty context just buys a second bad answer at full price.
 
 ```python
-if regen_passed or (regen_faith is not None and faithfulness is not None
-                    and regen_faith > faithfulness):
-    final_answer = regen_answer
+if faithfulness is None:
+    return VERDICT_UNSCORED
+if faithfulness >= threshold:
+    return VERDICT_PASSED
+if context_precision == 0.0:
+    return VERDICT_RETRIEVAL_FAILED
+return VERDICT_REJECTED
 ```
 
-The subtlety is the second branch. If the first answer scored 0.4 and the rewrite scores 0.45,
-neither passes — but 0.45 is still the better answer, and discarding it to serve 0.4 would
-mean the retry actively made things worse. A gate that can regress is worse than no gate.
+That is what context precision is *for* here: it is the signal that separates "ungrounded" from
+"nothing relevant was retrieved". Only `rejected` regenerates. `None` and `0.0` are kept
+deliberately distinct — the metric failing and the metric reporting nothing relevant are
+different facts, and conflating them would suppress a regeneration that might have helped.
 
-The scores are streamed to the browser as their own SSE event, so the interface can show what
-the gate decided rather than hiding it.
+This is also where the ugliest bug in the project lived. `LLMContextPrecisionWithoutReference`
+takes a `response` argument, and the original call passed the string `"placeholder"`. The score
+came back `0.0` every single time, which meant every rejected answer was being classified as
+`retrieval_failed` and **no answer was ever regenerated**. The gate was running, scoring,
+logging, and quietly doing nothing. It was found by asserting on the score rather than on the
+fact that the call returned.
 
-## What eval gating costs
+**A failing gate must never cost you the answer you can already see.** By the time the gate
+runs, the reader has a complete answer on screen. Ragas runs an LLM, so it can time out or
+throw — and every one of those paths resolves to `unscored` and keeps the draft, rather than
+replacing a readable answer with an error. The same applies to the regeneration: if the
+replacement comes back empty, from a content filter or a truncated completion, the draft stays
+and the attempt is reported as unscored. Switching to it would leave the reader with a
+retraction notice and nothing underneath it.
 
-It costs real streaming, and I want to be plain about that rather than let the SSE events
-imply otherwise.
+**The metrics get their own thread pool.** `asyncio.to_thread` uses the event loop's default
+executor, and a ragas call cannot be cancelled — a timed-out gate keeps its worker until the
+underlying LLM call finishes on its own. Enough of those would starve every other `to_thread`
+caller in the process, including ones with nothing to do with evaluation. So the gate gets a
+dedicated four-thread pool and a semaphore of two, keeping the queue shorter than the pool: a
+slow gate delays other gates instead of piling threads up behind them.
+
+The verdict and both scores are streamed to the browser as their own SSE event, so the interface
+shows what the gate decided rather than hiding it.
+
+## Streaming and gating used to be mutually exclusive
+
+This is the part I got wrong first, and fixing it is the change I am most pleased with.
 
 You cannot score an answer you have not finished generating, and you cannot un-say a token you
-have already sent. So the gated path generates the whole answer, scores it, possibly replaces
-it entirely, and only then replays the final text to the browser:
+have already sent. I read that as a hard constraint and built the gated path around it: generate
+the whole answer, score it, regenerate if it failed, score *that*, pick the winner, and only
+then replay the text to the browser four characters at a time. A typewriter animation, not a
+stream — and I said so on this page rather than let the SSE events imply otherwise.
 
-```python
-chunk_size = 4  # characters per token event
-for i in range(0, len(final_answer), chunk_size):
-    yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
-```
+It was also indefensibly slow. A Langfuse trace of a real request: **3m 41s**, every second of
+it before the first character appeared. About 74 of those seconds were the *second* faithfulness
+call — scoring the regenerated answer — which appeared in no span and which nobody was waiting
+on for any reason except that the code did it.
 
-That is a typewriter animation, not a stream. The time to *first* token is worse than plain
-streaming by the length of a full generation plus a faithfulness call — and on a failed gate,
-plus a second generation and a second check.
+The constraint was real. The conclusion I drew from it was not. You cannot un-say a token, but
+you can say a different thing afterwards, out loud, where the reader watches you do it. So the
+order changed: stream attempt one as Azure produces it, score it after the reader already has
+it, and if it is rejected, say so and stream the replacement underneath.
 
-The trade is deliberate: an answer that arrives slower but has been checked beats an answer
-that starts arriving instantly and is wrong. But it *is* a trade, and `ask_stream` still exists
-alongside `ask_with_eval` for the genuinely streaming path with only background evaluation. A
-truly incremental gate would need claim-level checking as tokens arrive, which is a much larger
-piece of work.
+Time to first token went from **221 seconds to 3.78**. The gate did not get faster. It moved off
+the path between the reader and the text.
+
+Two things paid for that, and I would rather name them than let the number stand alone.
+
+**The second scoring call is gone.** The replacement is no longer scored inline; it goes into
+the same background evaluation as everything else. That is the 74 seconds — and it means the
+replacement is served without proof that it beat what it replaced. The old code kept the
+regenerated answer only if it passed or outscored the original, which is a genuinely better
+guarantee than the one I have now. I traded it for two minutes of the reader's time, and I think
+that is the right trade for a system where the gate is visible, but it is a real loss.
+
+**The reader sees the retraction.** A rejected answer does not vanish and get quietly swapped;
+the interface marks the draft as rejected, shows the score that failed it, and streams the
+rewrite below. That is more honest than hiding the whole process behind a spinner, and it is
+also strictly more confusing than an answer that simply appears. I would rather be confusing and
+truthful than smooth and silent, but I understand the argument for the other one.
+
+What I gave up is the sentence "everything you see has passed". What I got is an interface that
+shows its work, and an answer that starts arriving in under four seconds.
 
 ## Evaluation you can look at afterwards
 
@@ -430,8 +560,42 @@ without anyone sitting down to write test questions. A batch run then plays the 
 set through the real pipeline and scores it on four metrics — the three per-query ones plus
 context recall, which needs the ground truth and so cannot run live.
 
-Repeated scoring is cached on `(question, contexts)`, because evaluating with an LLM costs the
-same as answering with one.
+Repeated scoring is cached on `(question, contexts, answer)`, because evaluating with an LLM
+costs the same as answering with one. The answer belongs in that key and was originally missing
+from it: faithfulness measures an answer *against* its contexts, so keying on the question and
+contexts alone hands one answer's score to a different answer to the same question — which is
+exactly how an ungrounded reply would have inherited a passing verdict.
+
+## Putting it somewhere people can click it
+
+The demo linked at the top of this page is a Next.js client on Vercel talking to this API on a
+free-tier Oracle ARM box: one core, 2 GB of RAM, Docker Compose behind Caddy with a Let's
+Encrypt certificate. That constraint did more to shape the code than any design document.
+
+Two GB is not enough to run the API and its model comfortably alongside anything else, so the
+eval pool is four threads rather than "as many as it takes", the gate's semaphore is two, and
+uvicorn runs a single worker — which is also the honest reason the module-level stores below are
+still defensible rather than merely convenient.
+
+Going public also meant the API could no longer assume good faith. Every answer is Azure spend
+and every upload is vision calls plus index space, so an account gets 25 answers for its
+lifetime and 2 document slots, with admins exempt. Two details in that are worth the space:
+
+The exchange counter is its own column on `users`, not a `COUNT(*)` over `chat_messages`.
+Deleting a session deletes its messages, so a derived count would hand anyone a fresh 25 every
+time they cleared their history — the cap would have been decorative, and it would have looked
+correct in every test that did not think to delete a session first.
+
+The refusal is `403`, not `429`. This API already uses 429 for two other things — the rate
+limiter and the login lockout — and both of those clear on their own. A lifetime quota never
+does, and telling a client to retry later when later will never help is a lie told in a status
+code.
+
+The check runs before any Azure call, so being refused costs nothing, and the charge is applied
+where the answer is persisted rather than where the request arrives: a request that dies before
+producing text is not charged, while one the reader actually received is charged even if they
+disconnect during the gate. Incrementing happens in SQL rather than read-modify-write, so two
+concurrent answers cannot both read the same value and lose a charge.
 
 ## The audit
 
@@ -475,8 +639,19 @@ first request is served.
 The rest: constant-time password comparison via `compare_digest` (asserted by reading the
 function's own source, so a future refactor back to `==` fails the suite), `/register` added to
 the API-key public paths because enabling a key had been silently breaking signup while login
-kept working, `/docs` and `/openapi.json` explicitly *not* public for the reverse reason, model
-output sanitised with DOMPurify before it reaches `innerHTML`, and every CDN script tag version-pinned.
+kept working, and `/docs` and `/openapi.json` explicitly *not* public for the reverse reason —
+publishing the full request surface unauthenticated defeats the point of having a key.
+
+**SEC-3 is the entry I am most glad I wrote down**, because it records a guarantee *leaving* the
+codebase. The server-rendered UI used to sanitise model output with DOMPurify before assigning
+`innerHTML`, and two tests asserted it. When the UI was removed and the API went headless, those
+tests had nothing left to read, so they were deleted — and the guarantee did not move somewhere
+else in this repo. It left it. The engine still returns model-authored markdown, `innerHTML` is
+still an XSS sink, and the renderer is now a separate client this suite cannot see. So SEC-3 is
+no longer a test; it is a comment where the tests used to be, stating that whatever consumes
+`/api/v1/chat` **must** sanitise before rendering and that nothing server-side will catch it if
+it does not. A deleted test that deletes a guarantee silently is how this class of bug gets
+reintroduced two years later.
 
 Around all of it: a CSP, `X-Frame-Options: DENY`, five-attempt login lockout on a five-minute
 window, uploads sanitised for path traversal on both separator styles and then re-checked with
@@ -500,9 +675,17 @@ globally and *then* drop documents belonging to other users. On a shared index w
 that over-fetch can be consumed entirely by other people's documents, and a user gets fewer
 chunks than they asked for. FAISS metadata pre-filtering would fix it properly.
 
-**The CSP still needs `'unsafe-inline'`**, because Tailwind's CDN build and HTMX both write
-inline styles. The comment above it says what the fix is — self-host the Tailwind build and go
-nonce-based — and until that is done the header is weaker than it looks.
+**Extracted figures share one flat namespace.** Uploads are stored per user, but the images
+pulled *out* of them land in a single `uploads/extracted/` directory keyed by filename. Two
+users who upload documents with the same name can therefore satisfy each other's ownership check
+on a figure. The endpoint guards against path traversal properly; it is the namespace underneath
+that is wrong, and the fix is to key extraction output by user the way uploads already are.
+
+**The quotas are friction, not enforcement.** A registered account gets 25 answers for its
+lifetime and 2 document slots, which is what keeps a public demo on a 2 GB box from becoming an
+open Azure bill. But registration takes a username and a password and verifies neither, so
+anyone who wants a second 25 can simply have one. It bounds accidents and casual use. It does
+not bound anyone who has decided to be a nuisance.
 
 **`allow_dangerous_deserialization=True`** is required to load a FAISS index from disk. The
 pickle is one this app wrote, so the flag is accurate rather than reckless, but it does mean
