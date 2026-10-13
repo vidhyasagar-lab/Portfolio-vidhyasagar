@@ -502,8 +502,11 @@ caller in the process, including ones with nothing to do with evaluation. So the
 dedicated four-thread pool and a semaphore of two, keeping the queue shorter than the pool: a
 slow gate delays other gates instead of piling threads up behind them.
 
-The verdict and both scores are streamed to the browser as their own SSE event, so the interface
-shows what the gate decided rather than hiding it.
+The verdict and both scores arrive separately, because by the time they exist the stream has
+already closed. The interface polls `/api/v1/chat/gate/{trace_id}` with a backoff and fills the
+badge in when the verdict lands, carrying the rewrite with it if there was one. The client still
+understands the older inline `eval` and `replace` events — what a backend that gated *inside* the
+stream would have sent — so both shapes cost one adapter rather than a version negotiation.
 
 ## Streaming and gating used to be mutually exclusive
 
