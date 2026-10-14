@@ -1,0 +1,338 @@
+---
+/**
+ * The intro video, with chapter links beside it.
+ *
+ * Self-hosted rather than embedded: no third-party cookies, no "more videos"
+ * wall when it ends, and the frame can match the site. `preload="none"` means
+ * a visitor who never presses play downloads only the 65 KB poster, not the
+ * 29 MB film. The file is already faststart (moov before mdat), so playback
+ * begins as soon as the first range arrives.
+ *
+ * Captions are burned into the video itself, so there is no <track>: it reads
+ * with the sound off, which is how most people will first meet it.
+ *
+ * Progressive enhancement: the markup ships with native `controls`. The script
+ * swaps them for the large play button only once it is running, so with no JS
+ * the player still works.
+ */
+
+const src = '/video/intro.mp4';
+const poster = '/video/intro-poster.jpg';
+const duration = '1:33';
+const durationSpoken = '1 minute 33 seconds';
+
+/**
+ * `at` is seconds, measured from where each section's caption first appears in
+ * the video. Re-measure if the video is re-cut; nothing else here depends on it.
+ */
+const chapters = [
+  { at: 0, label: "Hi, I'm Vidhya Sagar", detail: 'Retrieval, agents and evaluation' },
+  { at: 19.6, label: 'Red Nucleus', detail: 'RAG chatbot, eval pipelines, text-to-SQL' },
+  { at: 39.5, label: 'IQE at Atos Syntel', detail: 'Agents that write and run the tests' },
+  { at: 66.8, label: 'Building in the open', detail: 'Verity, AskDB and luckrate' },
+];
+
+const stamp = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+---
+
+<div class="intro" data-intro>
+  <header class="head reveal">
+    <h2 id="intro-title">What I build, in ninety seconds.</h2>
+    <p>A sketched walkthrough of the last four years. The captions are in the video, so it works with the sound off.</p>
+  </header>
+
+  <div class="frame reveal" style="transition-delay:80ms">
+    <video
+      src={src}
+      poster={poster}
+      width="1920"
+      height="1080"
+      preload="none"
+      playsinline
+      controls
+      aria-labelledby="intro-title"
+    >
+      <a href={src}>Download the intro video (MP4, {duration})</a>
+    </video>
+
+    <button type="button" class="play" data-play aria-label={`Play the intro video, ${durationSpoken}`}>
+      <span class="play-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>
+      </span>
+      <span class="play-label" aria-hidden="true">Play intro</span>
+      <span class="play-time" aria-hidden="true">{duration}</span>
+    </button>
+  </div>
+
+  <ol class="chapters reveal" style="transition-delay:160ms" aria-label="Chapters">
+    {chapters.map((c) => (
+      <li>
+        <button type="button" data-at={c.at}>
+          <span class="t">{stamp(c.at)}</span>
+          <span class="c">
+            <span class="label">{c.label}</span>
+            <span class="detail">{c.detail}</span>
+          </span>
+        </button>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-intro]').forEach((root) => {
+    const video = root.querySelector('video');
+    const play = root.querySelector<HTMLButtonElement>('[data-play]');
+    const chapters = [...root.querySelectorAll<HTMLButtonElement>('[data-at]')];
+    if (!video || !play) return;
+
+    // From here on the big button is the way in; native controls return on play.
+    video.controls = false;
+    root.classList.add('is-enhanced');
+
+    // With preload="none" there is no metadata yet, and Safari drops a seek
+    // made before it arrives. Queue the seek until the browser knows the length.
+    const seek = (t: number) => {
+      if (video.readyState >= 1) video.currentTime = t;
+      else video.addEventListener('loadedmetadata', () => { video.currentTime = t; }, { once: true });
+    };
+
+    const start = (at?: number) => {
+      if (at !== undefined) seek(at);
+      video.controls = true;
+      root.classList.add('is-started');
+      // The play button is about to become invisible; keep focus on the player.
+      video.focus({ preventScroll: true });
+      video.play().catch(() => { /* autoplay policy or user abort: controls are showing */ });
+    };
+
+    play.addEventListener('click', () => start());
+    chapters.forEach((c) => c.addEventListener('click', () => start(Number(c.dataset.at))));
+
+    // Mark the chapter the playhead is in, so the list doubles as a progress map.
+    let current = -1;
+    video.addEventListener('timeupdate', () => {
+      let i = -1;
+      chapters.forEach((c, k) => { if (video.currentTime >= Number(c.dataset.at) - 0.05) i = k; });
+      if (i === current) return;
+      current = i;
+      chapters.forEach((c, k) => {
+        if (k === i) c.setAttribute('aria-current', 'true');
+        else c.removeAttribute('aria-current');
+      });
+    });
+
+    video.addEventListener('ended', () => {
+      root.classList.remove('is-started');
+      video.controls = false;
+    });
+  });
+</script>
+
+<style>
+  /* Phone: heading, then the film, then the chapters. From 62rem the film
+     takes the wide column and the copy sits beside it, mirroring the hero,
+     whose visual is on the right. */
+  .intro {
+    display: grid;
+    gap: 1.6rem;
+    grid-template-areas:
+      "head"
+      "frame"
+      "chapters";
+  }
+
+  @media (min-width: 62rem) {
+    .intro {
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      grid-template-areas:
+        "frame head"
+        "frame chapters";
+      grid-template-rows: auto 1fr;
+      column-gap: clamp(2rem, 4vw, 3.5rem);
+      row-gap: 1.75rem;
+    }
+  }
+
+  /* --------- copy --------- */
+
+  .head { grid-area: head; display: grid; gap: .85rem; align-content: start; }
+
+  .head h2 {
+    font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+    color: var(--ink);
+  }
+
+  .head p {
+    max-width: 28.06em;  /* 46ch x .610, see --measure */
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--ink-2);
+  }
+
+  /* --------- player --------- */
+
+  .frame {
+    grid-area: frame;
+    position: relative;
+    /* Top, not centre: the copy column runs taller than the film, and centring
+       left the heading floating above the frame's top edge. */
+    align-self: start;
+    border-radius: 14px;
+    border: 1px solid var(--line-strong);
+    overflow: hidden;
+    /* The film's own paper colour, so the box never flashes black or page-tinted
+       between the poster and the first frame. Same in both themes on purpose:
+       it is the video's ground, not the page's. */
+    background: #EDEBE6;
+    box-shadow: 0 22px 60px -32px rgba(0, 0, 0, .55);
+    /* Reserves the box before the poster arrives, so nothing below it moves. */
+    aspect-ratio: 16 / 9;
+  }
+
+  video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: inherit;
+  }
+
+  video:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  /* Hidden until the script has run, so a no-JS visitor gets native controls
+     and no dead button on top of them. */
+  .play { display: none; }
+
+  .is-enhanced .play {
+    display: inline-flex;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    align-items: center;
+    gap: .7rem;
+    min-height: 48px;
+    padding: .45rem 1.1rem .45rem .45rem;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: var(--f-mono);
+    font-size: .78rem;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--accent-ink);
+    background: var(--accent);
+    box-shadow: 0 14px 34px -14px rgba(16, 20, 26, .6);
+    transform: translate(-50%, -50%);
+    transition: transform .3s cubic-bezier(.22, .68, .28, 1), opacity .25s ease, visibility 0s;
+  }
+
+  .is-enhanced .play:hover { transform: translate(-50%, -50%) scale(1.04); }
+
+  .is-enhanced .play:active {
+    transform: translate(-50%, -50%) scale(.97);
+    transition-duration: .06s;
+  }
+
+  .is-enhanced .play:focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: -5px;
+  }
+
+  /* Fade, then leave the accessibility tree once the fade is done. */
+  .is-started .play {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .25s ease, visibility 0s .25s;
+  }
+
+  .play-icon {
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent-ink) 16%, transparent);
+  }
+
+  .play-icon svg { width: 1.1rem; height: 1.1rem; }
+
+  .play-time {
+    padding-left: .7rem;
+    border-left: 1px solid color-mix(in srgb, var(--accent-ink) 35%, transparent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --------- chapters --------- */
+
+  .chapters {
+    grid-area: chapters;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    align-self: start;
+    border-top: 1px solid var(--line);
+  }
+
+  .chapters li { border-bottom: 1px solid var(--line); }
+
+  .chapters button {
+    display: grid;
+    grid-template-columns: 3.2rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: .9rem;
+    width: 100%;
+    min-height: 44px;
+    padding: .8rem .6rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color .2s ease;
+  }
+
+  .chapters button:hover,
+  .chapters button[aria-current="true"] {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+  }
+
+  .chapters button:focus-visible { outline-offset: -2px; }
+
+  .t {
+    font-family: var(--f-mono);
+    font-size: .76rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-3);
+    transition: color .2s ease;
+  }
+
+  .c { display: grid; gap: .1rem; }
+
+  .label {
+    font-weight: 600;
+    font-size: .98rem;
+    color: var(--ink);
+    transition: color .2s ease;
+  }
+
+  .detail {
+    font-size: .84rem;
+    line-height: 1.45;
+    color: var(--ink-3);
+  }
+
+  .chapters button:hover .t,
+  .chapters button[aria-current="true"] .t,
+  .chapters button[aria-current="true"] .label { color: var(--accent); }
+</style>

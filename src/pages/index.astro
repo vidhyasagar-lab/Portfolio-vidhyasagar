@@ -4,6 +4,7 @@ import Base from '../layouts/Base.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import EvalConsole from '../components/EvalConsole.astro';
 import ExperienceCompact from '../components/ExperienceCompact.astro';
+import IntroVideo from '../components/IntroVideo.astro';
 import { site, cv, cvFilename, availability } from '../site';
 
 const projects = (await getCollection('projects', ({ data }) => !data.draft))
@@ -71,6 +72,11 @@ function countWord(n: number): string {
         <EvalConsole />
       </div>
     </div>
+  </section>
+
+  {/* ---------------- INTRO VIDEO ---------------- */}
+  <section id="intro" class="shell block">
+    <IntroVideo />
   </section>
 
   {/* ---------------- EXPERIENCE ---------------- */}
