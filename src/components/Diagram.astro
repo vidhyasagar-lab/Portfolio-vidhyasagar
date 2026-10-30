@@ -34,7 +34,7 @@ const { label, caption } = Astro.props;
     {caption}
     {/* Only rendered narrow, where the diagram genuinely overflows. Without
         it a phone reader sees a cropped diagram and no sign it moves. */}
-    <span class="hint" aria-hidden="true">Scroll the diagram sideways to see all of it →</span>
+    <span class="hint" aria-hidden="true">Scroll the diagram sideways to see all of it.</span>
   </figcaption>
 </figure>
 
@@ -71,9 +71,8 @@ const { label, caption } = Astro.props;
 
   figcaption {
     margin-top: .7rem;
-    font-family: var(--f-mono);
-    font-size: .72rem;
-    letter-spacing: .04em;
+    font-size: .86rem;
+    line-height: 1.5;
     color: var(--ink-3);
   }
 

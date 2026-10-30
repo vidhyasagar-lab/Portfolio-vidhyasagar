@@ -12,12 +12,12 @@
 <aside class="console glass" aria-label="Interactive retrieval evaluation">
   <div class="head">
     <span class="mono tiny id">eval / retrieval-v4</span>
-    <span class="mono tiny state" id="ev-state">passing</span>
+    <span class="lbl state" id="ev-state">passing</span>
   </div>
 
   <div class="controls">
     <div class="group" role="group" aria-label="Chunk size">
-      <span class="mono tiny lbl glass-dim">chunk</span>
+      <span class="lbl glass-dim">chunk</span>
       <div class="chips">
         <button type="button" data-k="chunk" data-v="512" aria-pressed="true">512</button>
         <button type="button" data-k="chunk" data-v="256" aria-pressed="false">256</button>
@@ -25,7 +25,7 @@
     </div>
 
     <div class="group" role="group" aria-label="Reranker">
-      <span class="mono tiny lbl glass-dim">reranker</span>
+      <span class="lbl glass-dim">reranker</span>
       <div class="chips">
         <button type="button" data-k="rerank" data-v="off" aria-pressed="true">off</button>
         <button type="button" data-k="rerank" data-v="on" aria-pressed="false">on</button>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="group" role="group" aria-label="Generation model">
-      <span class="mono tiny lbl glass-dim">model</span>
+      <span class="lbl glass-dim">model</span>
       <div class="chips">
         <button type="button" data-k="model" data-v="small" aria-pressed="true">8B</button>
         <button type="button" data-k="model" data-v="large" aria-pressed="false">70B</button>
@@ -43,22 +43,22 @@
 
   <ul class="bars">
     <li>
-      <span class="mono tiny glass-dim">faithfulness</span>
+      <span class="lbl glass-dim">faithfulness</span>
       <span class="track"><span class="fill" id="b-faith"></span></span>
       <span class="mono tiny val" id="v-faith">0.71</span>
     </li>
     <li>
-      <span class="mono tiny glass-dim">context recall</span>
+      <span class="lbl glass-dim">context recall</span>
       <span class="track"><span class="fill" id="b-recall"></span></span>
       <span class="mono tiny val" id="v-recall">0.62</span>
     </li>
     <li>
-      <span class="mono tiny glass-dim">answer relevance</span>
+      <span class="lbl glass-dim">answer relevance</span>
       <span class="track"><span class="fill" id="b-rel"></span></span>
       <span class="mono tiny val" id="v-rel">0.74</span>
     </li>
     <li>
-      <span class="mono tiny glass-dim">hallucination</span>
+      <span class="lbl glass-dim">hallucination</span>
       <span class="track"><span class="fill low" id="b-hall"></span></span>
       <span class="mono tiny val" id="v-hall">0.12</span>
     </li>
@@ -71,7 +71,7 @@
       <span>n=1,200</span>
     </div>
     <p class="verdict" id="ev-verdict" role="status" aria-live="polite">
-      Baseline. No reranking — retrieval is the bottleneck, not the model.
+      Baseline. No reranking: retrieval is the bottleneck, not the model.
     </p>
   </div>
 </aside>
@@ -94,19 +94,24 @@
     border-bottom: 1px solid color-mix(in srgb, var(--glass-ink) 16%, transparent);
   }
 
+  /* Mono for what is an identifier or a figure; labels are the body face. */
   .mono { font-family: var(--f-mono); }
 
   .tiny {
-    font-size: .68rem;
+    font-size: .74rem;
     font-weight: 500;
-    letter-spacing: .1em;
-    text-transform: uppercase;
+  }
+
+  .lbl {
+    font-size: .84rem;
+    line-height: 1.3;
   }
 
   .id { color: var(--glass-ink); }
 
   .state {
     color: var(--accent);
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
     gap: .4rem;
@@ -136,25 +141,30 @@
     gap: .75rem;
   }
 
-  .lbl { letter-spacing: .12em; }
-
   .chips { display: flex; gap: .3rem; }
 
   .chips button {
-    font-family: var(--f-mono);
-    font-size: .7rem;
-    font-weight: 500;
-    letter-spacing: .06em;
-    padding: .3rem .7rem;
+    position: relative;
+    font-family: var(--f-body);
+    font-size: .84rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding: .3rem .75rem;
     border-radius: 7px;
     cursor: pointer;
-    /* 30px clears the 24px minimum but is mean to a thumb. Grow only where
-       the pointer is actually coarse, so the desktop cluster stays dense. */
-    min-height: 30px;
+    /* Tool-sized, so the cluster stays dense; the ::after below grows the
+       hit area to 44px without moving anything. */
+    min-height: 36px;
     color: var(--glass-ink-2);
     background: color-mix(in srgb, var(--glass-ink) 7%, transparent);
     border: 1px solid color-mix(in srgb, var(--glass-ink) 18%, transparent);
     transition: color .2s, background-color .2s, border-color .2s, transform .2s;
+  }
+
+  .chips button::after {
+    content: '';
+    position: absolute;
+    inset: -4px -1px;
   }
 
   @media (pointer: coarse) {
@@ -229,8 +239,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: .3rem 1.1rem;
-    text-transform: none;
-    letter-spacing: .05em;
   }
 
   .stats b {
@@ -268,7 +276,7 @@
   // and the 70B model costs ~3.4x for a rounding error of faithfulness.
   const TABLE: Record<string, Row> = {
     '512|off|small':   { faith: .71, recall: .62, rel: .74, hall: .12, p95: 620,  cost: .0009,
-      ok: false, verdict: 'Baseline. No reranking — retrieval is the bottleneck, not the model.' },
+      ok: false, verdict: 'Baseline. No reranking: retrieval is the bottleneck, not the model.' },
     '256|off|small':   { faith: .69, recall: .58, rel: .72, hall: .13, p95: 580,  cost: .0008,
       ok: false, verdict: 'Smaller chunks <b>felt</b> sharper in the demo. Recall dropped 0.04. This is why you measure.' },
     '512|on|small':    { faith: .93, recall: .89, rel: .90, hall: .04, p95: 840,  cost: .0021,
@@ -276,11 +284,11 @@
     '256|on|small':    { faith: .91, recall: .85, rel: .88, hall: .05, p95: 790,  cost: .0019,
       ok: true,  verdict: 'Reranking rescues the small chunks, but 512 still wins on recall.' },
     '512|off|large':   { faith: .73, recall: .62, rel: .79, hall: .11, p95: 1520, cost: .0031,
-      ok: false, verdict: '3.4× the cost. Faithfulness +0.02, recall unchanged — you cannot fix retrieval with a bigger model.' },
+      ok: false, verdict: '3.4× the cost. Faithfulness +0.02, recall unchanged. You cannot fix retrieval with a bigger model.' },
     '256|off|large':   { faith: .71, recall: .58, rel: .77, hall: .12, p95: 1480, cost: .0029,
       ok: false, verdict: 'Worst value on the board: pays for the large model and keeps the recall problem.' },
     '512|on|large':    { faith: .94, recall: .89, rel: .93, hall: .03, p95: 1740, cost: .0072,
-      ok: true,  verdict: 'Best scores — and <b>3.4× the cost of the 8B for +0.01 faithfulness.</b> We kept the 8B.' },
+      ok: true,  verdict: 'Best scores, and <b>3.4× the cost of the 8B for +0.01 faithfulness.</b> We kept the 8B.' },
     '256|on|large':    { faith: .92, recall: .85, rel: .91, hall: .04, p95: 1690, cost: .0068,
       ok: true,  verdict: 'Expensive and still behind 512-chunk on recall.' },
   };

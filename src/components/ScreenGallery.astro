@@ -200,7 +200,8 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
 
   .count {
     font-family: var(--f-mono);
-    font-size: .68rem;
+    font-size: .74rem;
+    font-variant-numeric: tabular-nums;
     line-height: 1;
     padding: .2rem .38rem;
     border-radius: 5px;
@@ -228,7 +229,7 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
   }
 
   .gal::backdrop {
-    background: rgba(3, 6, 10, .8);
+    background: var(--scrim-strong);
     backdrop-filter: blur(4px);
   }
 
@@ -243,7 +244,7 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
     border-radius: 14px;
     border: 1px solid var(--line);
     background: var(--surface);
-    box-shadow: 0 40px 100px -45px rgba(0, 0, 0, .85);
+    box-shadow: var(--shadow-gallery);
     overflow: hidden;
   }
 
@@ -296,7 +297,7 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
     place-items: center;
     padding: clamp(.75rem, 2vw, 1.35rem);
     background:
-      radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .04), transparent 60%),
+      radial-gradient(120% 90% at 50% 0%, var(--stage-glint), transparent 60%),
       var(--bg-deep);
   }
 
@@ -308,7 +309,7 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
     height: auto;
     object-fit: contain;
     border-radius: 8px;
-    box-shadow: 0 20px 60px -30px rgba(0, 0, 0, .9);
+    box-shadow: var(--shadow-stage);
   }
 
   /* The description gets a column of its own, so it is bounded by the viewport
@@ -336,8 +337,8 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
   .meta {
     margin: 0;
     font-family: var(--f-mono);
-    font-size: .72rem;
-    letter-spacing: .06em;
+    font-size: .76rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .idx { color: var(--accent); font-weight: 700; }
@@ -364,10 +365,7 @@ const { screens, projectTitle, label = 'See screens', id } = Astro.props;
   .proj {
     margin: auto 0 0;
     padding-top: 1rem;
-    font-family: var(--f-mono);
-    font-size: .68rem;
-    letter-spacing: .08em;
-    text-transform: uppercase;
+    font-size: .82rem;
     color: var(--ink-3);
   }
 

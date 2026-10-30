@@ -1,3 +1,26 @@
+/* Hallmark · checked: 2026-10-30 · genre: editorial (inferred)
+ * floor: 49a open (case-study Contents rail titles wrap; printed for the owner) · fixed: 14 (6a, 7a, 15, 19, 34, 40, 48, 49a, 50, 54, 56, 62, 63, 67)
+ * structural: printed (3, 44c, 58, 59, 77, 78, 79) · finish-review: subagent · 5 findings · 3 resolved, 1 unresolved (19 in MDX bodies), 1 printed (3)
+ * owner kept: the hero status strip and the availability chip as originally designed (54, 63, 67), by request on 2026-10-30
+ * built: the project · redesign: polish · v2.0.0 */
+/* Hallmark · waive 29 · glass on nav, cards, console and contact over a controlled aurora · the owner locked glass-as-accent for this portfolio on 2026-08-19 */
+/* Hallmark · waive 81 · div.mesh sits behind the contact glass panel, never alone · the page's contact section needs the mesh as its controlled glass backdrop */
+/* Hallmark · waive 39b · eval console chips are 36px with a ::after hit area to 44px · the console is a tool inside the hero, its chips sized like app controls */
+/* Hallmark · waive 26b · no form controls and no aria-disabled anywhere on the site · nothing on this portfolio can be disabled, so there is no state to draw */
+/* Hallmark · waive 49b · "Read the full CV: skills, certifications and education" wraps at 320 to two lines · the clause names what the CV page holds beyond the home rows */
+/* Hallmark · waive 72 · details.plat measured with its hidden highlights below a closed summary · the collapsed platform rows on /experience pad their visible text */
+/* Hallmark · waive 25 · case-study prose runs the full article column by the owner's documented choice · [...slug].astro trades measure for no empty band, with looser leading */
+/* Hallmark · dismissed 3 · .chev is a CSS triangle drawn with borders and the blockquote is a pull quote, neither is a card */
+/* Hallmark · dismissed 49 · btn-primary and btn-ghost now carry white-space: nowrap; chapter rows are list items, not buttons in a row */
+/* Hallmark · dismissed F3 · h1 to h4 inherit text-wrap: balance from the base heading rule in this file */
+/* Hallmark · dismissed 28a · the first gallery image lives in a closed dialog and is never the LCP element */
+/* Hallmark · answered F7 · pills on the eval bar track, the nav pill and the play button are the controls' own shapes */
+/* Hallmark · answered F15 · diagram gaps differ because each diagram's columns are its own data, not a page section */
+/* Hallmark · answered F19 · 500 survives only on nav links and mono figures; display 800, body 400 and 600 */
+/* Hallmark · answered F20 · five recognitions is the owner's true count; the pills wrap with the column */
+/* Hallmark · answered F17 · three outcome figures share one card row; wider labels push the third figure onto a row of its own */
+/* Hallmark · answered F24 · the lightbox panel keeps its hairline so a light screenshot edge does not dissolve into the scrim */
+
 @import "tailwindcss";
 
 /* ============================================================
@@ -109,6 +132,22 @@
   --au-alpha: .46;
   --grain-alpha: .05;
   --vignette: rgba(110, 124, 136, .20);
+
+  /* --- media and overlays: the same in both themes, because they sit on the
+     image or the film, not on the page ground --- */
+  --shadow-media:       0 14px 40px -26px rgba(0, 0, 0, .55);
+  --shadow-media-hover: 0 18px 50px -24px rgba(0, 0, 0, .6);
+  --shadow-panel:       0 40px 90px -40px rgba(0, 0, 0, .75);
+  --shadow-gallery:     0 40px 100px -45px rgba(0, 0, 0, .85);
+  --shadow-stage:       0 20px 60px -30px rgba(0, 0, 0, .9);
+  --shadow-film:        0 22px 60px -32px rgba(0, 0, 0, .55);
+  --shadow-play:        0 14px 34px -14px rgba(16, 20, 26, .6);
+  --scrim:              rgba(3, 6, 10, .72);
+  --scrim-strong:       rgba(3, 6, 10, .8);
+  --stage-glint:        rgba(255, 255, 255, .04);
+  /* The intro film's own paper colour, so its box never flashes between the
+     poster and the first frame. */
+  --film-paper:         #EDEBE6;
 
   /* --- type --- */
   /* "Bricolage Fallback" is the metric-matched stand-in defined above; the
@@ -249,9 +288,13 @@
    `.btn-primary[hidden]` would still show. Restore the intent. */
 [hidden] { display: none !important; }
 
+/* Horizontal clipping lives on <html> and <body> in Base.astro, as
+   `overflow-x-clip`, so the page shell states it where it is built. */
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--line-strong) var(--bg);
+  caret-color: var(--accent);
 }
 
 body {
@@ -264,7 +307,6 @@ body {
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
 }
 
 h1, h2, h3, h4 {
@@ -273,6 +315,8 @@ h1, h2, h3, h4 {
   letter-spacing: -.035em;
   line-height: 1.02;
   text-wrap: balance;
+  overflow-wrap: break-word;
+  min-width: 0;
   margin: 0;
 }
 
@@ -307,12 +351,13 @@ img { max-width: 100%; height: auto; display: block; }
   padding-inline: var(--rail);
 }
 
+/* Labels are the body face a step down, in the case they are written in.
+   Mono is kept for what is actually code or a figure. (The class name is
+   historical; it is used across the site.) */
 .mono-label {
-  font-family: var(--f-mono);
-  font-size: .7rem;
-  font-weight: 500;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  font-family: var(--f-body);
+  font-size: .84rem;
+  font-weight: 400;
   color: var(--ink-3);
 }
 
@@ -349,11 +394,10 @@ img { max-width: 100%; height: auto; display: block; }
   min-height: 44px;
   padding: .72rem 1.35rem;
   border-radius: 999px;
-  font-family: var(--f-mono);
-  font-size: .78rem;
-  font-weight: 500;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+  font-family: var(--f-body);
+  font-size: .92rem;
+  font-weight: 600;
+  white-space: nowrap;
   border: 1px solid transparent;
   cursor: pointer;
   transition: transform .25s, background-color .25s, border-color .25s, color .25s;
@@ -717,7 +761,10 @@ main, .foot { position: relative; z-index: 2; }
   animation: rise .62s cubic-bezier(.22, .68, .28, 1) backwards;
 }
 
-.reveal {
+/* Hidden only once the script is known to be running: Base.astro adds
+   `.js` before first paint. If the script never arrives, the page is
+   simply there rather than blank. */
+.js .reveal {
   opacity: 0;
   transform: translate3d(0, 20px, 0);
   transition: opacity .7s cubic-bezier(.22,.68,.28,1),
@@ -725,7 +772,7 @@ main, .foot { position: relative; z-index: 2; }
   will-change: transform, opacity;
 }
 
-.reveal.is-in {
+.js .reveal.is-in {
   opacity: 1;
   transform: translate3d(0, 0, 0);
 }
@@ -737,7 +784,7 @@ main, .foot { position: relative; z-index: 2; }
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-  .reveal { opacity: 1; transform: none; }
+  .js .reveal { opacity: 1; transform: none; }
 }
 
 /* ============================================================
@@ -751,25 +798,27 @@ main, .foot { position: relative; z-index: 2; }
 @media print {
   /* Light tokens unconditionally — printing the dark theme burns a
      cartridge and prints amber body text onto white paper. */
+  /* Paper and ink, a hair off the absolutes: indistinguishable on a page,
+     and it keeps the print palette in the same family as the screen one. */
   :root, :root[data-theme="dark"], :root[data-theme="light"] {
-    --bg: #FFFFFF;
-    --bg-deep: #FFFFFF;
-    --surface: #FFFFFF;
-    --surface-2: #FFFFFF;
-    --ink: #000000;
-    --ink-2: #1F1F1F;
-    --ink-3: #4A4A4A;
-    --line: #CCCCCC;
-    --line-strong: #999999;
-    --accent: #000000;
-    --accent-ink: #FFFFFF;
+    --bg: #FCFCFA;
+    --bg-deep: #FCFCFA;
+    --surface: #FCFCFA;
+    --surface-2: #FCFCFA;
+    --ink: #0B0D10;
+    --ink-2: #1F2124;
+    --ink-3: #4A4C50;
+    --line: #CCCCCA;
+    --line-strong: #99999A;
+    --accent: #0B0D10;
+    --accent-ink: #FCFCFA;
     --glass-bg: transparent;
-    --glass-border: #CCCCCC;
-    --glass-ink: #000000;
-    --glass-ink-2: #1F1F1F;
+    --glass-border: #CCCCCA;
+    --glass-ink: #0B0D10;
+    --glass-ink-2: #1F2124;
     --glass-shadow: none;
-    --neu-bg: #FFFFFF;
-    --neu-border: #CCCCCC;
+    --neu-bg: #FCFCFA;
+    --neu-border: #CCCCCA;
     --neu-light: transparent;
     --neu-dark: transparent;
   }
@@ -777,8 +826,8 @@ main, .foot { position: relative; z-index: 2; }
   @page { margin: 14mm; }
 
   html, body {
-    background: #FFFFFF;
-    color: #000000;
+    background: var(--bg);
+    color: var(--ink);
     font-size: 10.5pt;
   }
 
@@ -820,7 +869,7 @@ main, .foot { position: relative; z-index: 2; }
     box-shadow: none !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-    border-color: #CCCCCC !important;
+    border-color: var(--line) !important;
   }
 
   .shell { max-width: none; padding-inline: 0; }
@@ -834,7 +883,7 @@ main, .foot { position: relative; z-index: 2; }
     content: " (" attr(href) ")";
     font-family: var(--f-mono);
     font-size: .8em;
-    color: #4A4A4A;
+    color: var(--ink-3);
     word-break: break-all;
   }
 

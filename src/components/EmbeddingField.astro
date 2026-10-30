@@ -201,7 +201,9 @@ const { points = 2400 } = Astro.props;
     function applyTheme() {
       const dark = isDark();
       gl.uniform3fv(uPal, new Float32Array((dark ? DARK : LIGHT).flatMap(hex)));
-      baseAlpha = dark ? 1.0 : 0.68;
+      // Below full strength even on the first screen: at 1.0 the additive
+      // points sat on top of the CV's opening paragraph and broke up its words.
+      baseAlpha = dark ? 0.8 : 0.6;
       // Additive glow reads on near-black; it would wash out on paper.
       gl.blendFunc(gl.SRC_ALPHA, dark ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
     }
@@ -309,8 +311,9 @@ const { points = 2400 } = Astro.props;
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(uRot, yaw + scrollT * 2.1, pitch + scrollT * 0.3);
       gl.uniform1f(uSpread, spread);
-      // Step back behind reading material, but stay clearly present.
-      gl.uniform1f(uAlpha, baseAlpha * (1 - firstT * 0.22));
+      // Step back behind reading material, but stay clearly present. This is
+      // the sharp drop the header comment promises; at 0.22 it barely dimmed.
+      gl.uniform1f(uAlpha, baseAlpha * (1 - firstT * 0.5));
       gl.drawArrays(gl.POINTS, 0, drawN);
     }
 

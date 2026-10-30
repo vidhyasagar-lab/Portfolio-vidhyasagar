@@ -9,7 +9,7 @@ export const site = {
   fullName: 'Kokirala Vidhya Sagar',
   role: 'AI Engineer',
   blurb:
-    'Four years building production Generative AI — RAG chatbots, multi-agent workflows and LLM evaluation pipelines. Currently building AI products for LMS platforms at Red Nucleus; before that, IQE, a node-based test automation platform, and an eight-agent QA framework that automated up to 80% of manual validation.',
+    'Four years building production Generative AI: RAG chatbots, multi-agent workflows and LLM evaluation pipelines. Currently building AI products for LMS platforms at Red Nucleus; before that, IQE, a node-based test automation platform, and an eight-agent QA framework that automated up to 80% of manual validation.',
   location: 'Hyderabad, India',
   email: 'vidhyasagar54321@gmail.com',
   github: 'https://github.com/vidhyasagar-lab',
@@ -47,7 +47,7 @@ export const cvFilename = 'Vidhyasagar_Resume_AI_Engineer.pdf';
 
 /** Professional summary — the "first seven seconds" block on the CV page. */
 export const summary =
-  'Four years building production Generative AI systems — RAG chatbots, multi-agent workflows, LLM evaluation pipelines and the APIs around them. Most recently IQE, a node-based test automation platform where QA teams compose AI agents on a canvas, and an eight-agent QA framework. Much of that work has shipped inside customer environments rather than on hosted infrastructure, which shapes how I choose models: the largest one is rarely the deployable one. Microsoft Certified Azure AI Engineer Associate.';
+  'Four years building production Generative AI systems: RAG chatbots, multi-agent workflows, LLM evaluation pipelines and the APIs around them. Most recently IQE, a node-based test automation platform where QA teams compose AI agents on a canvas, and an eight-agent QA framework. Much of that work has shipped inside customer environments rather than on hosted infrastructure, which shapes how I choose models: the largest one is rarely the deployable one. Microsoft Certified Azure AI Engineer Associate.';
 
 /**
  * Grouped so the left edge of the table is scannable in an F-pattern.
@@ -73,8 +73,8 @@ export const certifications = [
 export const recognition = [
   'Employee of the Quarter',
   'Innovation Award',
-  'Spot Recognition — test automation',
-  'Spot Recognition — solution delivery',
+  'Spot Recognition: test automation',
+  'Spot Recognition: solution delivery',
   'Customer Demo Recognition',
 ] as const;
 

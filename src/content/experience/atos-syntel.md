@@ -1,11 +1,11 @@
 ---
 company: "Atos Syntel"
-role: "Senior Consultant — AI Engineering"
-period: "Aug 2022 — Mar 2026"
+role: "Senior Consultant, AI Engineering"
+period: "Aug 2022 to Mar 2026"
 order: 10
 current: false
 location: "India"
-summary: "Two Gen AI platforms for enterprise quality engineering, shipped into customer environments — including air-gapped ones where a hosted model API was never an option."
+summary: "Two Gen AI platforms for enterprise quality engineering, shipped into customer environments, including air-gapped ones where a hosted model API was never an option."
 owned:
   - label: "On-prem model deployment"
     detail: "Qwen, Llama and Gemma on customer-secured VMs, fine-tuned with LoRA and QLoRA to fit their hardware."
@@ -16,9 +16,9 @@ owned:
   - label: "Enterprise integration"
     detail: "Jira, ALM, Rally, Azure Boards, Zephyr and Confluence for requirement sync, defect linking and pushing approved test cases back."
   - label: "Security and data handling"
-    detail: "JWT and Keycloak SSO, owner-scoped data access, Azure Key Vault, and Microsoft Presidio PII masking — the part that decided whether a customer could run it at all."
+    detail: "JWT and Keycloak SSO, owner-scoped data access, Azure Key Vault, and Microsoft Presidio PII masking: the part that decided whether a customer could run it at all."
   - label: "Deployment"
-    detail: "Multi-stage Docker images to Azure Container Apps, Web App for Containers and bare VMs through CI/CD — customer environments that resembled each other very little."
+    detail: "Multi-stage Docker images to Azure Container Apps, Web App for Containers and bare VMs through CI/CD, into customer environments that resembled each other very little."
 impact:
   - metric: "70%"
     label: "less manual test design effort"
@@ -27,15 +27,15 @@ impact:
   - metric: "8"
     label: "agents in production"
 platforms:
-  - name: "IQE — Intelligent Quality Engineer"
+  - name: "IQE (Intelligent Quality Engineer)"
     description: "Node-based testing platform, formerly QE Assist: QA teams compose workflows on a drag-and-drop canvas that turn Jira requirements into reviewed test scenarios and test cases."
     highlights:
       - label: "DAG execution engine"
         detail: "Written rather than adopted: topological ordering with cycle detection, independent steps run in parallel on asyncio, human-in-the-loop pauses for review, sub-workflows, and live step status pushed over WebSocket."
       - label: "60+ pluggable node types"
-        detail: "Including AI test agents for scenario generation, test case generation, ambiguity detection and impact analysis, each running a LangGraph generate–validate–regenerate loop rather than a single call."
+        detail: "Including AI test agents for scenario generation, test case generation, ambiguity detection and impact analysis, each running a LangGraph generate-validate-regenerate loop rather than a single call."
       - label: "18-node RAG pipeline"
-        detail: "Document parsing, chunking, text-embedding-3-large, pgvector retrieval, reranking and query rewriting — so generated tests are grounded in the team's own documentation instead of the model's priors."
+        detail: "Document parsing, chunking, text-embedding-3-large, pgvector retrieval, reranking and query rewriting, so generated tests are grounded in the team's own documentation instead of the model's priors."
       - label: "Multi-provider model layer"
         detail: "Azure OpenAI, OpenAI, Claude, Gemini, Bedrock and Vertex AI through LangChain, with per-call token, latency and cost tracking. Selected per customer, because not every environment permits an outbound call."
       - label: "Rebuilt for async"
@@ -50,7 +50,7 @@ platforms:
       - label: "Requirement ambiguity detection"
         detail: "Flags missing, unclear or conflicting requirements before they reach test planning, which is the cheapest point to catch them."
       - label: "Validation agents"
-        detail: "Defect validation against reproduction steps and logs, plus API validation — cutting invalid submissions rather than generating more of them."
+        detail: "Defect validation against reproduction steps and logs, plus API validation, cutting invalid submissions rather than generating more of them."
       - label: "Code vulnerability and PR review"
         detail: "Reads repositories for vulnerabilities and bad patterns, proposing diff-based fixes on pull requests."
 stack:
@@ -59,8 +59,8 @@ stack:
   - "LangChain"
   - "FastAPI"
   - "Django"
-  - "PostgreSQL · pgvector"
+  - "PostgreSQL + pgvector"
   - "Docker"
   - "LoRA / QLoRA"
-  - "Azure · AWS"
+  - "Azure + AWS"
 ---

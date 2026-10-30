@@ -9,16 +9,15 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
   <ul class="list">
     {roles.map((r, i) => (
       <li class="row reveal" style={`transition-delay:${i * 80}ms`}>
-        <div class="when mono">
-          <span>{r.data.period}</span>
-          {r.data.current && <span class="dot" aria-hidden="true"></span>}
-        </div>
-
+        {/* The company leads in reading order; the grid still puts the dates
+            in the left column on a wide screen. */}
         <div class="what">
           <h3>{r.data.company}</h3>
-          <p class="role mono">{r.data.role}</p>
+          <p class="role">{r.data.role}</p>
           <p class="desc">{r.data.summary}</p>
         </div>
+
+        <div class="when">{r.data.period}</div>
 
         <dl class="figs">
           {r.data.impact.slice(0, 2).map((m) => (
@@ -49,31 +48,21 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
   /* Dates left, detail centre, figures right — the F-pattern scan order. */
   @media (min-width: 62rem) {
     .row {
-      grid-template-columns: 10rem minmax(0, 1fr) 14rem;
+      grid-template-columns: 10rem minmax(0, 1fr) 16rem;
       gap: 2.5rem;
       align-items: start;
     }
+
+    .when { grid-column: 1; grid-row: 1; }
+    .what { grid-column: 2; grid-row: 1; }
+    .figs { grid-column: 3; grid-row: 1; }
   }
 
-  .mono { font-family: var(--f-mono); }
-
+  /* "to present" already says which role is current; no dot needed. */
   .when {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    font-size: .72rem;
-    font-weight: 500;
-    letter-spacing: .12em;
-    text-transform: uppercase;
+    font-size: .86rem;
     color: var(--ink-3);
     padding-top: .35rem;
-  }
-
-  .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
   .what { display: grid; gap: .3rem; }
@@ -85,10 +74,8 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
   }
 
   .role {
-    font-size: .72rem;
-    font-weight: 500;
-    letter-spacing: .12em;
-    text-transform: uppercase;
+    font-size: .9rem;
+    font-weight: 600;
     color: var(--accent);
   }
 
@@ -121,9 +108,11 @@ const roles = (await getCollection('experience', ({ data }) => !data.draft))
 
   .figs dd {
     margin: 0;
-    font-size: .7rem;
+    font-size: .76rem;
     line-height: 1.35;
     color: var(--ink-3);
-    max-width: 7.93em;  /* 13ch x .610 */
+    /* With the 16rem track, wide enough that "evaluation layers: RAGAS,
+       DeepEval, Langfuse" sets in three lines rather than a four-line sliver. */
+    max-width: 12em;
   }
 </style>

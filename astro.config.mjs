@@ -23,6 +23,12 @@ export default defineConfig({
   // To add an island: `import react from '@astrojs/react'` and add react()
   // here, then use client:visible on the component.
   integrations: [mdx()],
+  // Shiki's default (github-dark) sets comments at 3.05:1 against its own
+  // background, under the 4.5:1 that body-size text needs. The -default
+  // variant keeps the same look with comments that pass.
+  markdown: {
+    shikiConfig: { theme: 'github-dark-default' },
+  },
   vite: {
     plugins: [tailwind()],
     server: {

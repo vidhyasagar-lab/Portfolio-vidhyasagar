@@ -196,14 +196,15 @@ const id = `fig-${Math.random().toString(36).slice(2, 9)}`;
     border-radius: var(--fig-radius);
     border: 1px solid var(--line);
     background: var(--surface);
-    box-shadow: 0 14px 40px -26px rgba(0, 0, 0, .55);
+    box-shadow: var(--shadow-media);
     transition: border-color .25s ease, box-shadow .25s ease;
   }
 
-  .trigger:hover img,
-  .trigger:focus-visible img {
+  /* Hover only. Focus is shown by the trigger's outline below, which appears
+     at once; easing the image's shadow in on focus made the cue fade in. */
+  .trigger:hover img {
     border-color: var(--line-strong);
-    box-shadow: 0 18px 50px -24px rgba(0, 0, 0, .6);
+    box-shadow: var(--shadow-media-hover);
   }
 
   .trigger:focus-visible {
@@ -241,9 +242,8 @@ const id = `fig-${Math.random().toString(36).slice(2, 9)}`;
 
   figcaption {
     margin-top: .65rem;
-    font-family: var(--f-mono);
-    font-size: .72rem;
-    letter-spacing: .04em;
+    font-size: .86rem;
+    line-height: 1.5;
     color: var(--ink-3);
   }
 
@@ -267,7 +267,7 @@ const id = `fig-${Math.random().toString(36).slice(2, 9)}`;
   }
 
   .lb::backdrop {
-    background: rgba(3, 6, 10, .72);
+    background: var(--scrim);
     backdrop-filter: blur(3px);
   }
 
@@ -276,7 +276,7 @@ const id = `fig-${Math.random().toString(36).slice(2, 9)}`;
     border: 1px solid var(--line);
     background: var(--surface);
     overflow: hidden;
-    box-shadow: 0 40px 90px -40px rgba(0, 0, 0, .75);
+    box-shadow: var(--shadow-panel);
   }
 
   .lb-inner img {
@@ -308,9 +308,11 @@ const id = `fig-${Math.random().toString(36).slice(2, 9)}`;
     color: var(--ink-2);
   }
 
+  /* A hair below the dialog's top edge, so the button has air above it
+     while the description scrolls under. */
   .lb-dismiss {
     position: sticky;
-    top: 0;
+    top: .5rem;
     z-index: 1;
     display: flex;
     justify-content: flex-end;

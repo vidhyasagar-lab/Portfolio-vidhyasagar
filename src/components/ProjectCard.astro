@@ -22,9 +22,11 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
   <a class="hit" href={href} aria-label={`Read the ${title} case study`}></a>
 
   <header>
-    <p class="mono meta">{period} · {role}</p>
     <h3 style={`view-transition-name: t-${slug}`}>{title}</h3>
     <p class="tagline glass-dim">{tagline}</p>
+    {/* After the tagline, not above the title: the name is what a reader
+        scans for, and the role reads as a byline once they have it. */}
+    <p class="meta">{role} ({period})</p>
   </header>
 
   {/* Always rendered, even when empty: the card subgrids onto the page grid so
@@ -41,18 +43,18 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
   </dl>
 
   <ul class="stack">
-    {stack.slice(0, 5).map((s) => <li class="mono">{s}</li>)}
+    {stack.slice(0, 5).map((s) => <li>{s}</li>)}
   </ul>
 
   <footer>
-    <span class="read">Read case study <span aria-hidden="true">→</span></span>
+    <span class="read">Read case study</span>
     <span class="links">
       {repo && (
         <a href={repo} rel="noopener noreferrer" target="_blank" title={repoLabel ?? 'Source code'}>
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
           </svg>
-          <span class="sr">{repoLabel ? `${repoLabel} — ${title}` : `Source code for ${title}`}</span>
+          <span class="sr">{repoLabel ? `${repoLabel}: ${title}` : `Source code for ${title}`}</span>
         </a>
       )}
       {live && (
@@ -83,7 +85,7 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
   /*
     Cross-card alignment.
 
-    The role line wraps to two or three lines depending on how long the role
+    The tagline and role wrap to different lengths depending on the project's
     string happens to be, and in a flex column every band below it inherits
     that drift: measured at 1440px, the metric rows sat 18px apart and the
     stack chips 33px apart. Only the footer held, because it has margin-top:
@@ -100,7 +102,7 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
       .card {
         display: grid;
         grid-template-rows: subgrid;
-        /* Six bands: role, title, tagline, metrics, stack, footer. */
+        /* Six bands: title, tagline, role, metrics, stack, footer. */
         grid-row: span 6;
         /* A subgrid inherits the parent's gap; state it so the rhythm inside
            a card stays the card's, not the grid's. */
@@ -145,14 +147,10 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
 
   header { display: grid; gap: .45rem; }
 
-  .meta { color: var(--glass-ink-2); }
-
-  .mono {
-    font-family: var(--f-mono);
-    font-size: .68rem;
-    font-weight: 500;
-    letter-spacing: .13em;
-    text-transform: uppercase;
+  .meta {
+    font-size: .82rem;
+    line-height: 1.45;
+    color: var(--glass-ink-2);
   }
 
   h3 {
@@ -208,11 +206,11 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
   }
 
   .stack li {
-    padding: .22rem .55rem;
+    padding: .2rem .55rem;
     border-radius: 5px;
     border: 1px solid color-mix(in srgb, var(--glass-ink) 20%, transparent);
+    font-size: .78rem;
     color: var(--glass-ink-2);
-    letter-spacing: .09em;
   }
 
   footer {
@@ -225,19 +223,10 @@ const { href, title, tagline, role, period, stack, repo, repoLabel, live, outcom
   }
 
   .read {
-    font-family: var(--f-mono);
-    font-size: .74rem;
-    letter-spacing: .1em;
-    text-transform: uppercase;
+    font-size: .9rem;
+    font-weight: 600;
     color: var(--accent);
   }
-
-  .read span {
-    display: inline-block;
-    transition: transform .35s cubic-bezier(.22,.68,.28,1);
-  }
-
-  .card:hover .read span { transform: translateX(4px); }
 
   .links {
     position: relative;

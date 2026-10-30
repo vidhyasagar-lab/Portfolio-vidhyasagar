@@ -27,10 +27,11 @@ function countWord(n: number): string {
       <div class="hero-copy">
         {/* Availability and specialism are two separate claims, so they get two
             separate elements rather than one run-on line: the chip can be
-            removed from site.ts without touching the positioning line. */}
+            removed from site.ts without touching the positioning line.
+            Kept above the headline by the owner's choice. */}
         <p class="eyebrow rise" style="animation-delay:.05s">
           {availability && <span class="avail">{availability}</span>}
-          <span class="mono-label">{site.status}</span>
+          <span class="status">{site.status}</span>
         </p>
 
         {/*
@@ -54,7 +55,7 @@ function countWord(n: number): string {
             ))}
           </span>
           <span class="ln">
-            <span class="msk"><i class="hl" style="--d:400ms">finish the work.</i></span>
+            <span class="msk"><i style="--d:400ms">finish the work.</i></span>
           </span>
         </h1>
 
@@ -82,22 +83,20 @@ function countWord(n: number): string {
   {/* ---------------- EXPERIENCE ---------------- */}
   <section id="experience" class="shell block">
     <header class="block-head reveal">
-      <p class="mono-label">Experience</p>
-      <h2>Where the constraints were real.</h2>
+      <h2 class="one-line">Experience</h2>
       <p class="prose">Production systems, private repositories. What I owned and what changed.</p>
     </header>
 
     <ExperienceCompact />
 
     <p class="more reveal">
-      <a href="/experience">Full CV — skills, certifications, education <span aria-hidden="true">&rarr;</span></a>
+      <a href="/experience">Read the full CV: skills, certifications and education</a>
     </p>
   </section>
 
   {/* ---------------- WORK ---------------- */}
   <section id="work" class="shell block">
     <header class="block-head reveal">
-      <p class="mono-label">Selected work</p>
       {/* Counted from the collection, not typed. A hard-coded number goes stale
           the first time a project is added or removed — as it already had. */}
       <h2>{countWord(projects.length)}, and what each one taught me.</h2>
@@ -131,7 +130,6 @@ function countWord(n: number): string {
   {/* ---------------- APPROACH (the one neumorphic surface) ---------------- */}
   <section id="approach" class="shell block">
     <header class="block-head reveal">
-      <p class="mono-label">Approach</p>
       <h2>Demos are easy. Evidence is the job.</h2>
     </header>
 
@@ -163,11 +161,10 @@ function countWord(n: number): string {
     <div class="contact glass reveal">
       <div class="mesh" aria-hidden="true"></div>
       <div class="contact-inner">
-        <p class="mono-label">Contact</p>
-        <h2>Let's talk about the hard part.</h2>
+        <h2>Let’s talk about the hard part.</h2>
         <p class="contact-lede glass-dim">
-          If you're building something where model reliability actually matters, I'd like to hear
-          about it — including the parts that aren't working yet.
+          If you’re building something where model reliability actually matters, I’d like to hear
+          about it, including the parts that aren’t working yet.
         </p>
         {availability && <p><span class="avail">{availability}</span></p>}
         <div class="cta">
@@ -221,6 +218,15 @@ function countWord(n: number): string {
     gap: .55rem .8rem;
   }
 
+  .status {
+    font-family: var(--f-mono);
+    font-size: .7rem;
+    font-weight: 500;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
   h1 {
     /*
       Sized against the column, not the viewport's idea of "big".
@@ -272,8 +278,6 @@ function countWord(n: number): string {
     animation-delay: var(--d, 0ms);
   }
 
-  .kinetic .hl { color: var(--accent); }
-
   @keyframes kin {
     to { transform: translate3d(0, 0, 0); }
   }
@@ -292,13 +296,14 @@ function countWord(n: number): string {
 
   .cta { display: flex; flex-wrap: wrap; gap: .7rem; max-width: 100%; }
 
-  /* The email address is one 25-character token with no break opportunity.
-     Uppercased and letter-spaced it is wider than a small phone, so let it
-     break rather than push the button past the screen edge. */
-  .cta .btn-primary {
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    text-align: center;
+  /* The email address is one 26-character token with no break opportunity.
+     In the body face at a phone's size it fits on one line at 320px, so it
+     stays whole: a button label broken across two lines reads as a fault. */
+  @media (max-width: 24rem) {
+    .contact .cta .btn-primary {
+      font-size: .8rem;
+      padding-inline: 1rem;
+    }
   }
 
   /* ---------------- blocks ---------------- */
@@ -315,6 +320,8 @@ function countWord(n: number): string {
   }
 
   .block-head h2 {
+    overflow-wrap: break-word;
+    min-width: 0;
     font-size: clamp(1.9rem, 4.4vw, 3rem);
     max-width: 11.88em;  /* 20ch x .594, display face */
     /*
@@ -328,14 +335,17 @@ function countWord(n: number): string {
     min-height: 2.04em;  /* 2 lines at the 1.02 heading line-height */
   }
 
+  /* One-word heads cannot wrap, so there is no second line to reserve. */
+  .block-head h2.one-line { min-height: 0; }
+
   .grid {
     display: grid;
     gap: 1.1rem;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  @media (min-width: 44rem) { .grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 72rem) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 44rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 72rem) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
   .empty {
     padding: 3rem 0;
@@ -353,13 +363,9 @@ function countWord(n: number): string {
     /* Wraps to two lines on a narrow phone, so align to the last line rather
        than centring a two-line box against a one-line rule. */
     align-items: flex-end;
-    flex-wrap: wrap;
-    gap: .5rem;
     min-height: 44px;
-    font-family: var(--f-mono);
-    font-size: .76rem;
-    letter-spacing: .1em;
-    text-transform: uppercase;
+    font-size: .95rem;
+    font-weight: 600;
     color: var(--accent);
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     padding-bottom: .25rem;
@@ -367,8 +373,6 @@ function countWord(n: number): string {
   }
 
   .more a:hover { border-bottom-color: var(--accent); }
-  .more span { transition: transform .3s cubic-bezier(.22,.68,.28,1); }
-  .more a:hover span { transform: translateX(4px); }
 
   /* ---------------- tenets (neumorphic) ---------------- */
 
@@ -429,8 +433,6 @@ function countWord(n: number): string {
     font-size: clamp(1.9rem, 4.4vw, 3rem);
     color: var(--glass-ink);
   }
-
-  .contact .mono-label { color: var(--glass-ink-2); }
 
   .contact-lede {
     max-width: 29.28em;  /* 48ch x .610 */
